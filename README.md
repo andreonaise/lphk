@@ -1,93 +1,95 @@
-# LPHK
+# lphk
 
-A macro editor for Novation Launchpads, with a dark desktop interface.
+lphk lets you use a novation launchpad as a macro keyboard. each pad can run
+a script, press a shortcut, control your music, play a sound, or open something.
 
-Assign scripts and colours to your pads. Use them for keyboard shortcuts,
-media controls, mouse actions, sound effects, or opening files and websites.
+this is my fork of [nimaid's lphk](https://github.com/nimaid/LPHK). i've kept
+the original scripting language and layout formats, added a dark interface,
+and worked on windows, linux, and mangowm support. credit for the original
+tool goes to **ella jameson (nimaid)**.
 
-![LPHK showing an example desktop layout](docs/screenshots/main.png)
+![an example layout in lphk](docs/screenshots/main.png)
 
-*Example layout shown without a connected device.*
+the screenshot uses an example layout. there wasn't a launchpad connected when
+it was taken.
 
-This is a modified edition of [nimaid/LPHK](https://github.com/nimaid/LPHK).
-The original scripting language, layout format, and pad actions are retained.
+## getting it running
 
-## Download
+download the build for your system from this repo's **releases** page, then
+extract the whole archive.
 
-Open **Releases** on this repository and download the archive for your system.
+- **windows:** open `LPHK.exe`.
+- **linux:** open a terminal in the extracted folder and run `./LPHK`.
 
-| System | Release archive | Getting started |
-| --- | --- | --- |
-| Windows 10/11, x86_64 | `LPHK-0.4.0-Windows-x86_64.zip` | Extract the entire folder and open `LPHK.exe`. |
-| Linux, x86_64 | `LPHK-0.4.0-Linux-x86_64.tar.gz` | Extract the entire folder and run `./LPHK`. |
+the release files are named `LPHK-0.4.0-Windows-x86_64.zip` and
+`LPHK-0.4.0-Linux-x86_64.tar.gz`. both include python and the app's libraries.
+the linux build also bundles the wayland input tools, so you don't need to
+install those separately. github's source-code zip needs a development setup.
 
-Prebuilt releases include Python and the application's libraries. The Linux
-archive also includes the Wayland input tools. You do not need pip, a Python
-installation, conda, or a compiler to use a prebuilt release. Downloading
-GitHub's **Source code** archive is for development, not a ready-to-run app.
+these builds are for x86_64 windows 10/11 and linux. there aren't macos or arm
+builds here. linux builds use ubuntu 22.04 as their glibc baseline; i can't
+promise they'll work on every distribution.
 
-You still need a working graphical desktop, USB/MIDI access, and the appropriate
-Launchpad driver where required. The Linux GUI needs X11 or your Wayland
-desktop's XWayland support. Native file dialogs follow your desktop's theme.
+you'll still need usb/midi access and the appropriate launchpad driver if your
+device needs one. the gui uses x11 or xwayland on linux. file dialogs follow
+your desktop's theme.
 
-Only x86_64 Windows and Linux builds are provided. macOS and ARM builds are not
-part of this release configuration. Linux builds use Ubuntu 22.04 as the glibc
-baseline; CachyOS is the intended MangoWM target, not a promise of support for
-every Linux distribution.
+### cachyos and mangowm
 
-## CachyOS / MangoWM
-
-For a **prebuilt Linux release**, open a terminal inside the extracted folder
-from your MangoWM session:
+for the prebuilt linux download, run this once from a terminal in your mangowm
+session, inside the extracted folder:
 
 ```bash
 bash install-linux-input.sh
+```
+
+then start the app:
+
+```bash
 ./LPHK
 ```
 
-Run the setup script once, as your normal user. It installs the **bundled**
-virtual-input helper using sudo, creates a per-user systemd service, backs up
-your MangoWM configuration, and adds a rule for the virtual device. It does not
-download Python or install application packages. LPHK itself runs without sudo.
+the setup script asks for sudo to install the bundled input helper and its
+systemd service. it backs up your mangowm config before adding a rule for the
+virtual device. it doesn't download python or install application packages.
+run the app itself as your normal user.
 
-The helper needs `/dev/uinput` access to send keys and mouse actions to native
-Wayland apps. That permission step cannot be removed by bundling dependencies.
-The helper socket is restricted to your account with mode `0600`.
+wayland needs this extra permission step so the helper can send keyboard and
+mouse input through `/dev/uinput`. its socket is restricted to your account
+with mode `0600`.
 
-MangoWM must support `get cursorpos` and the current `device_rule` configuration
-syntax. Cursor queries use MangoWM's IPC directly; no separate `mmsg` install is
-needed. Unicode text uses the virtual keyboard protocol. Other Wayland
-compositors need their own cursor integration.
+use a current mangowm version with `get cursorpos` and `device_rule` support.
+lphk talks to mangowm's ipc directly, so `mmsg` isn't required. text entry uses
+the virtual keyboard protocol. the wayland backend is intended for mangowm;
+other compositors need their own cursor integration.
 
-If you use a custom MangoWM config:
+if your mangowm config lives somewhere else:
 
 ```bash
 LPHK_MANGO_CONFIG=/path/to/your/config.conf bash install-linux-input.sh
 ```
 
-For diagnostics, run `./LPHK --check-system`. This does not type or move the
-mouse. Keyboard grabs, game confinement, desktop shortcuts, and screen locks
-can still limit what applications accept.
+you can check the setup with `./LPHK --check-system`. that command doesn't
+generate keyboard or mouse input. games, screen locks, pointer grabs, and
+desktop bindings can still affect which inputs get through.
 
-## Use
+## using it
 
-1. Connect your Launchpad before starting the app.
-2. LPHK detects it on startup. Use **Reconnect** or **Launchpad > Redetect** if
-   you connect it later.
-3. In **Edit** mode, click a pad, enter a script, choose its colour, and select
-   **Bind Button**.
-4. Save your layout from the **Layout** menu or **Save** button.
+connect your launchpad before opening lphk. if you plug it in afterward, use
+**reconnect** or **launchpad > redetect**.
 
-**Move**, **Swap**, and **Copy** work by selecting a source pad and then a
-destination. The original mode control in the grid's upper-right corner still
-works. The Layout menu retains New, Load, Save, and Save As. The script editor
-retains import, export, validation, colour selection, and unbinding.
+click a pad in **edit** mode, write your script, choose a colour, and press
+**bind button**. use **save** to keep the layout.
 
-![The dark script editor](docs/screenshots/editor.png)
+**move**, **swap**, and **copy** each take two clicks: the source pad, then the
+destination. you can also change modes with the original control in the top
+right of the grid. new, load, save, and save as are still in the layout menu.
+script import/export, validation, colour selection, and unbinding are still
+available in the editor.
 
-### Example scripts
+![the script editor](docs/screenshots/editor.png)
 
-Copy the current selection:
+for example, this sends ctrl+c:
 
 ```text
 PRESS ctrl
@@ -95,52 +97,54 @@ TAP c
 RELEASE ctrl
 ```
 
-Toggle media playback:
+this toggles media playback:
 
 ```text
 TAP play_pause
 ```
 
-Hold a key while the Launchpad button is held:
+and this holds a key for as long as you hold the launchpad button:
 
 ```text
 @SIMPLE a
 ```
 
-See the [LPHKscript reference](docs/SCRIPTING.md) for the full command list.
-The README and scripting reference are also available offline from **Help**.
+the full command list is in the [scripting reference](docs/SCRIPTING.md).
+you can read it offline from the help menu too.
 
-### Layouts and files
+## your layouts and scripts
 
-Layouts use `.lpl`; individual scripts use `.lps`. Legacy `.LPHKlayout` and
-`.LPHKscript` imports remain available. By default, files are kept in
-`user_layouts`, `user_scripts`, and `user_sounds` beside the app. Keep the app in
-a writable folder. **Help > User Folder** opens the active location.
+layouts use `.lpl`, and individual scripts use `.lps`. the older `.LPHKlayout`
+and `.LPHKscript` formats can still be imported.
 
-Set `LPHK_USER_PATH` to use another data directory. Existing `USERPATH` files
-are also supported. Bundled examples are copied on first launch without
-overwriting existing examples. `user_layouts/startup.lpl` loads on connection.
-Windows program paths and platform-specific shortcuts in your own macros may
-need changing when moving a layout to Linux.
+by default, your files go in `user_layouts`, `user_scripts`, and `user_sounds`
+beside the app. keep it in a writable folder. **help > user folder** opens the
+location it's actually using.
 
-## Devices
+you can set `LPHK_USER_PATH` to use a different folder. existing `USERPATH`
+files also work. examples are copied on first launch without overwriting your
+existing examples. a layout at `user_layouts/startup.lpl` loads when you connect.
 
-The existing connectors are retained for Launchpad Classic/Mini/S, MkII,
-Mini Mk3, Launchpad X, and Launchpad Pro. Pro support retains upstream's beta
-limitations; see the scripting reference and device connection prompts.
-This edition does not add support for unrelated MIDI controllers.
+if you're moving layouts between windows and linux, check any program paths
+or os-specific shortcuts in your scripts.
 
-## Build from source
+## launchpads
 
-Development requires Python 3.11 or 3.12. These steps are not needed for a
-prebuilt download.
+the existing connectors cover classic/mini/s, mkii, mini mk3, launchpad x,
+and launchpad pro. pro support still has the original beta limitations; follow
+the connection prompts. this fork doesn't add support for unrelated midi
+controllers.
 
-On Windows, run `SETUP.bat`, then `RUN.bat`. On Linux/X11, run `bash SETUP.sh`,
-then `bash RUN.bash`. CachyOS/MangoWM source users can run
-`bash SETUP_CACHYOS.sh`; that developer setup uses pacman and downloads Python
-and dependencies, unlike the prebuilt-release setup above.
+## building it yourself
 
-To build a native archive, install PyInstaller in your development environment:
+use python 3.11 or 3.12. on windows, run `SETUP.bat`, then `RUN.bat`.
+on linux/x11, run `bash SETUP.sh`, then `bash RUN.bash`.
+
+for a cachyos/mangowm source checkout, use `bash SETUP_CACHYOS.sh`. that script
+is for development: it uses pacman and downloads python and dependencies.
+the prebuilt release's setup script above doesn't do that.
+
+to make a release archive from your development environment:
 
 ```bash
 python -m pip install -r requirements.txt pyinstaller==6.22.3
@@ -148,40 +152,41 @@ python build.py
 python release_tools/package_release.py
 ```
 
-On Linux, first build the bundled tools with
-`python release_tools/build_linux_helpers.py`. Build-machine packages are listed
-in `.github/workflows/release.yml`. Build on the target operating system; the
-Windows build does not create a Linux binary.
+on linux, build the bundled helpers first with
+`python release_tools/build_linux_helpers.py`. the build-machine packages are
+listed in `.github/workflows/release.yml`. build on the os you're targeting.
 
-## GitHub releases
+### building through github
 
-The **Build downloadable apps** workflow builds Windows and Linux archives and
-checks the packaged GUI. Run it manually to get downloadable Actions artifacts,
-or push a tag matching `VERSION`, for example `v0.4.0`, to create a draft GitHub
-release with both app archives, source, and SHA-256 checksums. Review the draft
-and publish it when the builds are ready. The source repository does not contain
-generated binaries or a local virtual environment.
+you can keep the repo private and still use actions. open **actions > build
+downloadable apps** and run the workflow to get windows and linux artifacts.
+people need access to the private repo to download them.
 
-## Testing and status
+pushing a tag that matches `VERSION`, such as `v0.4.0`, also creates a draft
+release after both builds finish. it includes the app archives, source, and
+sha-256 checksums. review the draft before publishing it. publishing a release
+in a private repo doesn't make the repo public.
 
-Automated checks cover backend selection, input mappings, error handling,
-configuration backups, bundled-tool lookup, and windowed logging. GUI checks
-exercise Edit/Move/Swap/Copy, the original corner mode control, colour selection,
-script import/export, layout save/load, Help, and disconnection with a fake
-Launchpad. Packaged startup/shutdown is checked separately.
+## what has been tested
 
-Windows GUI and packaged-app checks have been run during this edition's
-development. Real Launchpad hardware and MangoWM/Wayland input still require
-on-device testing. A successful headless Linux build does not replace hardware
-testing. When reporting a problem, include your OS, desktop/session type,
-Launchpad model, and the relevant part of `LPHK.log` from the user folder.
+the windows gui, packaged startup/shutdown, and 34 automated tests have passed.
+the gui checks use a fake launchpad and cover the pad modes, script editing,
+colour selection, import/export, layout save/load, help, and disconnection.
 
-## Credits and license
+real launchpad hardware and live mangowm/wayland input still need testing.
+a passing build on a linux runner doesn't confirm those work on a real desktop.
 
-LPHK was created by **Ella Jameson (nimaid)**. This edition updates the interface,
-platform handling, Wayland input, and release packaging. It is a fork, not an
-official Novation product or an upstream release.
+if something breaks, include your os, desktop/session type, launchpad model,
+and the relevant part of `LPHK.log` from the user folder when reporting it.
 
-LPHK's original [GPL-3.0 license](LICENSE) is retained. See [UPSTREAM.md](UPSTREAM.md)
-for provenance and [THIRD_PARTY.md](THIRD_PARTY.md) for bundled components. Keep
-the license, notices, and corresponding source available when redistributing.
+## credits
+
+the original lphk was made by **ella jameson (nimaid)**. this is a fork with
+changes to the interface, platform support, input handling, and packaging.
+it isn't an official novation product or an upstream lphk release.
+
+the original [gpl-3.0 license](LICENSE) is kept. [upstream.md](UPSTREAM.md)
+records where the code came from, and [third_party.md](THIRD_PARTY.md) lists the
+bundled components. please keep the notices and corresponding source available
+when redistributing it.
+
