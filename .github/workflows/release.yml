@@ -1,0 +1,84 @@
+name: Build downloadable apps
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-22.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check release tag matches VERSION
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: test "${GITHUB_REF_NAME}" = "v$(tr -d '\r\n' < VERSION)"
+      - name: Linux build dependencies (build machine only)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk libasound2-dev xvfb build-essential cmake meson ninja-build pkg-config libwayland-dev libwayland-bin libxkbcommon-dev
+      - run: python -m pip install -r requirements.txt pyinstaller==6.22.3
+      - run: python -m unittest discover -s tests -v
+      - if: runner.os == 'Linux'
+        run: |
+          bash -n install-linux-input.sh
+          bash -n SETUP_CACHYOS.sh
+          xvfb-run -a python tests/gui_functional.py
+          python release_tools/build_linux_helpers.py
+      - if: runner.os == 'Windows'
+        run: python tests/gui_functional.py
+      - run: python build.py
+      - if: runner.os == 'Linux'
+        run: |
+          ./dist/LPHK/LPHK --version
+          xvfb-run -a python tests/frozen_smoke.py
+      - if: runner.os == 'Windows'
+        run: python tests/frozen_smoke.py
+      - run: python release_tools/package_release.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LPHK-${{ runner.os }}
+          path: |
+            release/*.zip
+            release/*.tar.gz
+            release/*.sha256
+
+  draft-release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+      - name: Include the exact source for this tag
+        shell: bash
+        run: |
+          version="$(tr -d '\r\n' < VERSION)"
+          git archive --format=zip --prefix=LPHK/ -o "release/LPHK-${version}-source.zip" HEAD
+          cd release
+          sha256sum "LPHK-${version}-source.zip" > "LPHK-${version}-source.zip.sha256"
+      - uses: softprops/action-gh-release@v3
+        with:
+          draft: true
+          body_path: RELEASE_NOTES.md
+          files: |
+            release/*.zip
+            release/*.tar.gz
+            release/*.sha256
+          fail_on_unmatched_files: true
