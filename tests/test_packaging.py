@@ -2,6 +2,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import runpy
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -13,6 +14,23 @@ import logger
 
 
 class PackagingTests(unittest.TestCase):
+    def test_linux_build_explicitly_includes_dynamic_x11_backends(self):
+        with patch.object(sys, 'platform', 'linux'), patch.object(Path, 'is_file', return_value=True), patch('subprocess.run') as build:
+            runpy.run_path(str(ROOT / 'build.py'), run_name='__main__')
+        arguments = build.call_args.args[0]
+        for module in ('pynput.keyboard._xorg', 'pynput.mouse._xorg', 'pynput._util.xorg'):
+            index = arguments.index(module)
+            self.assertEqual(arguments[index - 1], '--hidden-import')
+        index = arguments.index('Xlib')
+        self.assertEqual(arguments[index - 1], '--collect-submodules')
+
+    def test_windows_build_keeps_linux_only_imports_out(self):
+        with patch.object(sys, 'platform', 'win32'), patch('subprocess.run') as build:
+            runpy.run_path(str(ROOT / 'build.py'), run_name='__main__')
+        arguments = build.call_args.args[0]
+        self.assertNotIn('pynput.keyboard._xorg', arguments)
+        self.assertIn('--windowed', arguments)
+
     def test_windowed_logging_has_no_console_dependency(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'LPHK.log'
