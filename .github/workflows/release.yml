@@ -38,7 +38,12 @@ jobs:
           python release_tools/build_linux_helpers.py
       - if: runner.os == 'Windows'
         run: python tests/gui_functional.py
-      - run: python build.py
+      - name: Build Linux app with X11 available during backend discovery
+        if: runner.os == 'Linux'
+        run: xvfb-run -a python build.py
+      - name: Build Windows app
+        if: runner.os == 'Windows'
+        run: python build.py
       - if: runner.os == 'Linux'
         run: |
           ./dist/LPHK/LPHK --version
