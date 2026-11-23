@@ -1,0 +1,7 @@
+Pillow>=10.4,<12
+pygame>=2.6.1,<3
+pynput>=1.7.7,<2
+PyAutoGUI>=0.9.54,<0.10
+tkcolorpicker==2.1.3
+python-rtmidi>=1.5.8,<2
+launchpad-py @ https://github.com/FMMT666/launchpad.py/archive/94381e95186d8ae6d0708f76859890f3473d3bab.zip

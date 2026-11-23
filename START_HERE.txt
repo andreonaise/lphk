@@ -1,0 +1,9 @@
+LPHK 0.4.0
+
+Read README.md for installation and use.
+Windows prebuilt release: extract everything and open LPHK.exe.
+Linux prebuilt release: extract everything and run ./LPHK.
+MangoWM: first run bash install-linux-input.sh as your normal user.
+
+The prebuilt archives include Python and application dependencies.
+The source archive requires a development setup; see README.md.

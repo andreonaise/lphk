@@ -1,0 +1,671 @@
+{
+  "buttons": [
+    [
+      {
+        "color": [
+          0,
+          255,
+          0
+        ],
+        "text": "@LOAD_LAYOUT examples/all_delays_all_gay.lpl"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      }
+    ],
+    [
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      }
+    ],
+    [
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      }
+    ],
+    [
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      }
+    ],
+    [
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      }
+    ],
+    [
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      }
+    ],
+    [
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      }
+    ],
+    [
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      }
+    ],
+    [
+      {
+        "color": [
+          0,
+          0,
+          0
+        ],
+        "text": ""
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      },
+      {
+        "color": [
+          0,
+          0,
+          255
+        ],
+        "text": "DELAY 2"
+      }
+    ]
+  ],
+  "version": "0.1.1"
+}

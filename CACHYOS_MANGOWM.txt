@@ -1,0 +1,35 @@
+LPHK / CachyOS + MangoWM
+
+Prebuilt Linux archive:
+  bash install-linux-input.sh
+  ./LPHK
+
+Source checkout (developer setup, downloads packages):
+  bash SETUP_CACHYOS.sh
+  bash RUN.bash
+
+Use a current MangoWM version with cursorpos IPC and device_rule support.
+The GUI uses XWayland. Macro input uses the bundled ydotool and wtype programs
+in prebuilt releases. Cursor queries connect directly to MangoWM's IPC socket.
+The mmsg executable is not required.
+
+The prebuilt setup installs the input helper with sudo, creates a private
+0600 socket for your account, and backs up your MangoWM config before adding
+the virtual-device rule. Run LPHK as your normal user, not as root.
+
+Diagnostics for the prebuilt app: ./LPHK --check-system
+Custom config: LPHK_MANGO_CONFIG=/path/to/config.conf bash install-linux-input.sh
+
+The input service is named lphk-ydotool-YOUR_UID.service. For status, run:
+  systemctl status "lphk-ydotool-$(id -u).service"
+
+To remove it:
+  sudo systemctl disable --now "lphk-ydotool-$(id -u).service"
+  sudo rm -- "/etc/systemd/system/lphk-ydotool-$(id -u).service"
+  sudo systemctl daemon-reload
+Remove the BEGIN LPHK WAYLAND ... END LPHK WAYLAND block from your MangoWM
+config, then reload MangoWM. The prebuilt helper binary is stored at
+/usr/local/lib/lphk/ydotoold and can be removed once no LPHK service uses it.
+
+See README.md for full requirements, limitations, source builds and licenses.
+Physical Launchpad and live MangoWM testing remains unverified here.
