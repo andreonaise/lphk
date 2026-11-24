@@ -1,13 +1,11 @@
-LPHK 0.4.0 adds a dark interface, Windows/Linux packaging, and a MangoWM Wayland input backend.
+## lphk 0.5.1
 
-- Keeps the original pad grid, scripting language, layout formats, and Edit/Move/Swap/Copy actions.
-- Bundles Python and application libraries in platform-specific downloads.
-- Bundles Linux Wayland helper programs and their source archives.
-- Includes a one-time `install-linux-input.sh` script for MangoWM input permissions.
+- one play/pause toolbar button for starting, pausing, and resuming soundtrack pads.
+- the same launchpad pad also toggles play, pause, and resume.
+- separate play/resume fade-in and pause fade-out controls.
+- stop/end fade remains independently adjustable.
+- existing soundtrack bindings keep their previous fade behavior.
 
-Download the **Windows .zip** or **Linux .tar.gz** asset and extract the whole
-folder. The source zip is for development. Launchpad drivers and a working
-graphical desktop are still required. The Linux GUI uses X11/XWayland.
-
-MangoWM/Wayland input and physical Launchpad behavior require on-device testing.
-See README.md for setup, supported devices, and limitations.
+56 automated tests pass, plus windows audio/demo GUI checks with dummy audio.
+linux/mangowm, audible hardware output, and real launchpad leds still need
+on-device testing.

@@ -9,5 +9,5 @@ if [[ -z "${DISPLAY:-}" ]]; then
     echo 'The Tk interface needs X11 or XWayland. Start from a desktop terminal (CachyOS: install xorg-xwayland).'
     exit 1
 fi
-.venv/bin/python check_system.py
+.venv/bin/python check_system.py || echo 'Input setup is incomplete. Soundtracks and demo editing are still available.'
 exec .venv/bin/python LPHK.py "$@"

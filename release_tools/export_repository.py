@@ -5,6 +5,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 ROOT_FILES = {
+    'audio_tracks.py', 'track_commands.py', 'demo_launchpad.py', 'soundtrack_ui.py',
     'LPHK.py', 'bresenham.py', 'files.py', 'kb.py', 'logger.py', 'lp_colors.py',
     'lp_events.py', 'ms.py', 'scripts.py', 'sound.py', 'window.py', 'ui_theme.py',
     'runtime_support.py', 'input_backend.py', 'bundled_tools.py', 'mango_ipc.py',

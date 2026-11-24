@@ -21,8 +21,8 @@ extract the whole archive.
 - **windows:** open `LPHK.exe`.
 - **linux:** open a terminal in the extracted folder and run `./LPHK`.
 
-the release files are named `LPHK-0.4.0-Windows-x86_64.zip` and
-`LPHK-0.4.0-Linux-x86_64.tar.gz`. both include python and the app's libraries.
+the release files are named `LPHK-0.5.1-Windows-x86_64.zip` and
+`LPHK-0.5.1-Linux-x86_64.tar.gz`. both include python and the app's libraries.
 the linux build also bundles the wayland input tools, so you don't need to
 install those separately. github's source-code zip needs a development setup.
 
@@ -112,6 +112,59 @@ and this holds a key for as long as you hold the launchpad button:
 the full command list is in the [scripting reference](docs/SCRIPTING.md).
 you can read it offline from the help menu too.
 
+## soundtracks and demo mode
+
+you can now try lphk without a launchpad. click **demo mode** or choose it from
+the launchpad menu. an empty session loads the included soundtrack example.
+click **play pads** to run the pads with your mouse, or **back to editing** to
+change their bindings. hold the mouse button for hold-to-press scripts.
+play mode runs the assigned scripts on your computer, including normal macros.
+
+for your own soundtrack:
+
+1. open a pad in edit mode and click **soundtrack...**.
+2. browse for an audio file, then set its volume, play/resume fade-in,
+   pause fade-out, and stop/end fade-out times.
+3. apply the settings and bind the pad.
+4. switch to play pads, or press the actual launchpad button.
+
+the first press starts the track. the next fades it out and pauses it; another
+press resumes from that position, with the fade-in you chose. this uses the same
+audio channel rather than replaying the file. the pause fade is separate from the fade used at the end of the track and
+when using **stop all**. stopping resets a track; pausing keeps its place.
+
+the toolbar also has one **play / pause all** button: first click starts the
+soundtrack pads, the next pauses them, and another resumes them. each track
+uses its own fade times. separate pause and resume pads are optional.
+
+playing pads turn green, paused pads turn amber, and the green level follows
+the fade. supported launchpads pulse amber while paused; older models show a
+steady colour. stopped pads return to their saved colours. the main window
+also shows how many tracks are playing or paused.
+
+![soundtrack playback in demo mode](docs/screenshots/soundtracks.png)
+
+settings are saved in the pad's script, so existing layout formats still work:
+
+```text
+SOUND_TRACK "music/my track.ogg" 80 1500 2000 500
+```
+
+the numbers are volume percent, play/resume fade-in milliseconds, stop/end
+fade-out milliseconds, and pause fade-out milliseconds. the optional last
+number defaults to the stop/end fade for older bindings. the soundtrack dialog
+shows all fade times in seconds. use `SOUND_PAUSE` or
+`SOUND_RESUME` to control all soundtrack pads from another pad; an optional
+millisecond argument overrides the individual fade settings. `SOUND_STOP 1000`
+stops all audio with a one-second fade. the original `SOUND` command still plays
+ordinary sound effects and can overlap with soundtracks.
+
+browsing copies the file into `user_sounds` without overwriting an existing
+file. share that audio folder alongside your layout if you move it to another
+computer. wav and ogg are the safest formats; other formats depend on the
+bundled sdl_mixer decoder. tracks are decoded into memory, so several large
+files can use a lot of ram. the demo tone was generated for this project.
+
 ## your layouts and scripts
 
 layouts use `.lpl`, and individual scripts use `.lps`. the older `.LPHKlayout`
@@ -162,14 +215,14 @@ you can keep the repo private and still use actions. open **actions > build
 downloadable apps** and run the workflow to get windows and linux artifacts.
 people need access to the private repo to download them.
 
-pushing a tag that matches `VERSION`, such as `v0.4.0`, also creates a draft
+pushing a tag that matches `VERSION`, such as `v0.5.1`, also creates a draft
 release after both builds finish. it includes the app archives, source, and
 sha-256 checksums. review the draft before publishing it. publishing a release
 in a private repo doesn't make the repo public.
 
 ## what has been tested
 
-the windows gui, packaged startup/shutdown, and 34 automated tests have passed.
+the windows gui, packaged startup/shutdown, and 56 automated tests have passed.
 the gui checks use a fake launchpad and cover the pad modes, script editing,
 colour selection, import/export, layout save/load, help, and disconnection.
 
@@ -189,4 +242,3 @@ the original [gpl-3.0 license](LICENSE) is kept. [upstream.md](UPSTREAM.md)
 records where the code came from, and [third_party.md](THIRD_PARTY.md) lists the
 bundled components. please keep the notices and corresponding source available
 when redistributing it.
-

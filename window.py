@@ -7,6 +7,7 @@ import webbrowser
 import ui_theme as theme
 
 import scripts, files, lp_colors, lp_events
+import sound
 from utils import launchpad_connector as lpcon
 
 BUTTON_SIZE = 40
@@ -47,6 +48,7 @@ save_script_filetypes = [('LPHK script files', [files.SCRIPT_EXT])]
 
 lp_connected = False
 lp_mode = None
+demo_mode = False
 colors_to_set = [[DEFAULT_COLOR for y in range(9)] for x in range(9)]
 
 
@@ -86,6 +88,9 @@ class Main_Window(tk.Frame):
         self.grid_rects = [[None for y in range(9)] for x in range(9)]
         self.mode_buttons = {}
         self.layout_buttons = []
+        self.run_mode = False
+        self.held_demo_pad = None
+        self._audio_signature = None
         self.init_window()
 
         self.about_image = ImageTk.PhotoImage(Image.open(PATH + "/resources/LPHK-banner.png"))
@@ -99,6 +104,7 @@ class Main_Window(tk.Frame):
         self.button_mode = "edit"
         self.last_clicked = None
         self.outline_box = None
+        self.after(50, self.audio_tick)
 
     def init_window(self):
         global root
@@ -111,6 +117,8 @@ class Main_Window(tk.Frame):
 
         self.m_Launchpad = tk.Menu(self.m, tearoff=False)
         self.m_Launchpad.add_command(label="Redetect (Restart)", command=self.redetect_lp)
+        self.m_Launchpad.add_command(label="Demo mode (no Launchpad)", command=self.connect_dummy)
+        self.m_Launchpad.add_command(label="Load soundtrack demo", command=self.load_soundtrack_demo)
         self.m.add_cascade(label="Launchpad", menu=self.m_Launchpad)
 
         self.m_Layout = tk.Menu(self.m, tearoff=False)
@@ -140,12 +148,14 @@ class Main_Window(tk.Frame):
         tk.Label(header, text="LPHK", font=(theme.FONT, 23, "bold")).pack(side="left")
         tk.Label(header, text="Launchpad Hotkey", fg=theme.MUTED).pack(side="left", padx=14, pady=(9, 0))
         theme.button(header, "Reconnect", self.redetect_lp).pack(side="right")
+        theme.button(header, "Demo mode", self.connect_dummy).pack(side="right", padx=(0, 8))
 
         c_gap = int(BUTTON_SIZE // 4)
 
         c_size = (BUTTON_SIZE * 9) + (c_gap * 9)
         self.c = tk.Canvas(self, width=c_size, height=c_size, bd=0)
         self.c.bind("<Button-1>", self.click)
+        self.master.bind("<ButtonRelease-1>", self.release_play_pad, add='+')
         self.c.grid(row=1, column=0, padx=(24, 20), pady=(0, 20))
         self.draw_empty_state()
 
@@ -175,16 +185,77 @@ class Main_Window(tk.Frame):
         self.mode_hint = tk.Label(sidebar, text="", fg=theme.MUTED, anchor="nw",
                                   justify="left", wraplength=205)
         self.mode_hint.grid(row=7, column=0, sticky="ew")
-        sidebar.rowconfigure(8, weight=1)
-        tk.Label(sidebar, text="Layouts, scripts and sounds", fg=theme.MUTED, anchor="w").grid(row=9, column=0, sticky="ew", pady=(20, 8))
-        theme.button(sidebar, "Open user folder", open_user_folder).grid(row=10, column=0, sticky="ew")
+        self.play_button = theme.button(sidebar, "Play pads", self.toggle_play_mode)
+        self.play_button.grid(row=8, column=0, sticky='ew', pady=(18, 0))
+        sidebar.rowconfigure(9, weight=1)
+        theme.button(sidebar, "Open user folder", open_user_folder).grid(row=10, column=0, sticky="ew", pady=(18, 0))
         self.update_sidebar()
 
         self.stat = tk.Label(self, text="No Launchpad connected", bg=STAT_INACTIVE_COLOR,
                              fg=theme.MUTED, anchor="w", padx=24, pady=12)
-        self.stat.grid(row=2, column=0, columnspan=2, sticky=tk.EW)
+        self.stat.grid(row=3, column=0, columnspan=2, sticky=tk.EW)
+        transport = tk.Frame(self)
+        transport.grid(row=2, column=0, columnspan=2, sticky='ew', padx=24, pady=(0, 16))
+        self.transport_toggle = theme.button(transport, 'Play / pause all', self.toggle_audio_all)
+        self.transport_toggle.pack(side='left', padx=(0, 8))
+        for label, command in (("Stop all", sound.stop_faded),):
+            theme.button(transport, label, command).pack(side='left', padx=(0, 8))
+        self.audio_status = tk.Label(transport, text='no soundtracks playing', fg=theme.MUTED)
+        self.audio_status.pack(side='right')
+
+    def toggle_audio_all(self):
+        import track_commands
+        bindings = {}
+        try:
+            for x, column in enumerate(scripts.text):
+                for y, script in enumerate(column):
+                    for line in script.splitlines():
+                        if line.strip().startswith('SOUND_TRACK '):
+                            bindings[x, y] = track_commands.parse(line.strip())
+                            break
+            sound.toggle_all(bindings)
+        except Exception as error:
+            self.popup(self, 'Could not control soundtracks', self.error_image, str(error), 'OK')
+
+    def toggle_play_mode(self):
+        if not lp_connected:
+            self.connect_dummy()
+        self.run_mode = not self.run_mode
+        self.release_play_pad()
+        self.play_button.configure(text='Back to editing' if self.run_mode else 'Play pads',
+                                   bg=theme.ACCENT_BG if self.run_mode else theme.BUTTON)
+        self.update_sidebar()
+
+    def release_play_pad(self, event=None):
+        if self.held_demo_pad is not None:
+            x, y = self.held_demo_pad
+            lp_events.pressed[x][y] = False
+            self.held_demo_pad = None
+
+    def audio_tick(self):
+        try:
+            sound.tick()
+            states = sound.snapshot()
+            signature = tuple((pad, state['state'], round(state['gain'] * 20)) for pad, state in states.items())
+            if signature != self._audio_signature:
+                if lp_connected:
+                    pads = set(states) | {item[0] for item in self._audio_signature or ()}
+                    for x, y in pads:
+                        lp_colors.updateXY(x, y)
+                if self.grid_drawn:
+                    self.draw_canvas()
+                self._audio_signature = signature
+            playing = sum(state['state'] not in ('paused', 'stopped') for state in states.values())
+            paused = sum(state['state'] == 'paused' for state in states.values())
+            self.audio_status.configure(text=f'{playing} playing / {paused} paused' if playing or paused else 'no soundtracks playing')
+        except Exception as error:
+            print('[sound] Update failed:', error)
+        if not root_destroyed:
+            self.after(50, self.audio_tick)
 
     def set_mode(self, mode):
+        if self.run_mode:
+            self.toggle_play_mode()
         self.button_mode = mode
         self.last_clicked = None
         self.update_sidebar()
@@ -204,7 +275,7 @@ class Main_Window(tk.Frame):
             "swap": "Choose two pads to exchange their scripts and colours.",
             "copy": "Choose a pad, then a destination to copy it to.",
         }
-        self.mode_hint.configure(text=hints[self.button_mode])
+        self.mode_hint.configure(text='Click or hold a pad to run its script. Green: playing. Amber: paused.' if self.run_mode else hints[self.button_mode])
         for mode, button in self.mode_buttons.items():
             selected = mode == self.button_mode
             button.configure(bg=theme.ACCENT_BG if selected else theme.BUTTON,
@@ -249,16 +320,41 @@ class Main_Window(tk.Frame):
             for button in self.layout_buttons:
                 button.configure(state="disabled")
 
-    def connect_dummy(self):
-        # WIP
-        global lp_connected
-        global lp_mode
-        global lp_object
-
+    def connect_dummy(self, load_example=True):
+        global lp_connected, lp_mode, lp_object, demo_mode
+        if demo_mode:
+            return
+        lp_events.stop()
+        self.release_play_pad()
+        if lp_connected:
+            try:
+                lpcon.disconnect(lp_object)
+            except Exception as error:
+                print('[demo] Could not close hardware:', error)
+        from demo_launchpad import DemoLaunchpad
+        lp_object = DemoLaunchpad()
+        lp_colors.init(lp_object)
         lp_connected = True
-        lp_mode = "Dummy"
+        lp_mode = "Demo"
+        demo_mode = True
         self.draw_canvas()
         self.enable_menu("Layout")
+        self.stat.configure(text='Demo mode / no Launchpad connected', bg=STAT_ACTIVE_COLOR, fg=theme.ACCENT)
+        print('[demo] mode enabled')
+        example = os.path.join(files.LAYOUT_PATH, 'examples', 'soundtrack_demo.lpl')
+        if load_example and not any(value for row in scripts.text for value in row) and os.path.isfile(example):
+            files.load_layout_to_lp(example)
+
+    def load_soundtrack_demo(self):
+        self.modified_layout_save_prompt()
+        self.connect_dummy(load_example=False)
+        name = os.path.join(files.LAYOUT_PATH, 'examples', 'soundtrack_demo.lpl')
+        if os.path.isfile(name):
+            files.load_layout_to_lp(name)
+            if not self.run_mode:
+                self.toggle_play_mode()
+        else:
+            self.popup(self, 'Demo layout missing', self.info_image, 'The soundtrack demo layout is missing from this copy.', 'OK')
 
     def connect_lp(self):
         global lp_connected
@@ -279,7 +375,7 @@ class Main_Window(tk.Frame):
                               """Could not detect any connected Launchpads!
                               Disconnect and reconnect your USB cable,
                               then click 'Redetect Now'.""",
-                              [["Ignore", None], ["Redetect Now", self.redetect_lp]]
+                              [["Ignore", None], ["Demo mode", self.connect_dummy], ["Redetect Now", self.redetect_lp]]
                               )
             return
 
@@ -313,9 +409,10 @@ class Main_Window(tk.Frame):
                 files.load_layout_to_lp(os.path.join(files.LAYOUT_PATH, "startup.lpl"))
 
     def disconnect_lp(self):
-        global lp_connected
-        if lp_events.timer is not None:
-            lp_events.timer.cancel()
+        global lp_connected, demo_mode
+        lp_events.stop()
+        self.release_play_pad()
+        sound.stop()
         if lp_connected:
             try:
                 scripts.unbind_all()
@@ -327,6 +424,7 @@ class Main_Window(tk.Frame):
                 except Exception as error:
                     print("[window] Could not close Launchpad:", error)
         lp_connected = False
+        demo_mode = False
 
         self.clear_canvas()
 
@@ -384,6 +482,9 @@ class Main_Window(tk.Frame):
 
         if self.grid_drawn:
             if(column, row) == (8, 0):
+                if self.run_mode:
+                    self.toggle_play_mode()
+                    return
             #mode change
                 self.last_clicked = None
                 if self.button_mode == "edit":
@@ -396,6 +497,12 @@ class Main_Window(tk.Frame):
                     self.button_mode = "edit"
                 self.draw_canvas()
             else:
+                if self.run_mode:
+                    self.release_play_pad()
+                    self.held_demo_pad = (column, row)
+                    lp_events.pressed[column][row] = True
+                    lp_events.press_funcs[column][row](column, row)
+                    return
                 if self.button_mode == "edit":
                     self.last_clicked = (column, row)
                     self.draw_canvas()
@@ -470,29 +577,29 @@ class Main_Window(tk.Frame):
         if self.grid_drawn:
             for x in range(8):
                 y = 0
-                self.c.itemconfig(self.grid_rects[x][y], fill=theme.pad_color(lp_colors.getXY_RGB(x, y)))
+                self.c.itemconfig(self.grid_rects[x][y], fill=self.pad_display_color(x, y))
 
             for y in range(1, 9):
                 x = 8
-                self.c.itemconfig(self.grid_rects[x][y], fill=theme.pad_color(lp_colors.getXY_RGB(x, y)))
+                self.c.itemconfig(self.grid_rects[x][y], fill=self.pad_display_color(x, y))
 
             for x in range(8):
                 for y in range(1, 9):
-                    self.c.itemconfig(self.grid_rects[x][y], fill=theme.pad_color(lp_colors.getXY_RGB(x, y)))
+                    self.c.itemconfig(self.grid_rects[x][y], fill=self.pad_display_color(x, y))
 
             self.c.itemconfig(self.grid_rects[8][0], text=self.button_mode.capitalize())
         else:
             for x in range(8):
                 y = 0
-                self.grid_rects[x][y] = self.draw_button(x, y, color=lp_colors.getXY_RGB(x, y), shape="circle")
+                self.grid_rects[x][y] = self.draw_button(x, y, color=self.pad_display_color(x, y), shape="circle")
 
             for y in range(1, 9):
                 x = 8
-                self.grid_rects[x][y] = self.draw_button(x, y, color=lp_colors.getXY_RGB(x, y), shape="circle")
+                self.grid_rects[x][y] = self.draw_button(x, y, color=self.pad_display_color(x, y), shape="circle")
 
             for x in range(8):
                 for y in range(1, 9):
-                    self.grid_rects[x][y] = self.draw_button(x, y, color=lp_colors.getXY_RGB(x, y))
+                    self.grid_rects[x][y] = self.draw_button(x, y, color=self.pad_display_color(x, y))
 
             gap = int(BUTTON_SIZE // 4)
             text_x = round((BUTTON_SIZE * 8) + (gap * 8) + (BUTTON_SIZE / 2) + (gap / 2))
@@ -501,6 +608,10 @@ class Main_Window(tk.Frame):
                                                     fill=theme.MUTED, font=(theme.FONT, 9))
 
             self.grid_drawn = True
+
+    def pad_display_color(self, x, y):
+        colour = sound.visual((x, y))
+        return lp_colors.list_RGB_to_string(colour) if colour is not None else theme.pad_color(lp_colors.getXY_RGB(x, y))
 
     def clear_canvas(self):
         self.c.delete("all")
@@ -599,6 +710,10 @@ class Main_Window(tk.Frame):
         save_button.pack(fill="x")
         save_button.config(font=BUTTON_FONT)
         save_button.config(bg=theme.ACCENT_BG, fg=theme.ACCENT)
+        def soundtrack_settings():
+            import soundtrack_ui
+            soundtrack_ui.open_settings(w, t, USER_PATH)
+        theme.button(properties, 'Soundtrack...', soundtrack_settings).pack(fill='x', pady=(12, 0))
 
         unbind_func = lambda: self.unbind_destroy(x, y, w)
         unbind_button = tk.Button(properties, text="Unbind Button (" + str(x) + ", " + str(y) + ")", command=unbind_func)
@@ -853,7 +968,11 @@ def make():
     app = Main_Window(root)
     app.raise_above_all()
     if "--smoke-test" in sys.argv:
-        app.after(300, close)
+        if '--demo' in sys.argv:
+            app.after(50, app.load_soundtrack_demo)
+        app.after(500, close)
+    elif '--demo' in sys.argv:
+        app.after(100, app.connect_dummy)
     else:
         app.after(100, app.connect_lp)
     app.mainloop()

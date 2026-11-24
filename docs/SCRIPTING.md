@@ -160,3 +160,36 @@ For the `PRESS`, `RELEASE`, and `TAP` commands, all single character non-whitesp
 * `vol_down`
 * `vol_up`
 
+
+## soundtrack controls (0.5.0)
+
+- `SOUND_TRACK "relative filename" [volume] [fade_in_ms] [fade_out_ms]` gives a pad
+  a play/pause/resume soundtrack. Defaults are volume 100, no fades. The file is
+  relative to user_sounds; quote paths with spaces. Fade times are whole
+  milliseconds (0–3600000). Volume is 0–100.
+- `SOUND_PAUSE [fade_ms]` pauses all soundtrack pads. With no argument, each
+  track uses its own fade-out. The playhead continues during that fade, then
+  stays at the point where the channel is actually paused.
+- `SOUND_RESUME [fade_ms]` resumes paused soundtrack pads from that position,
+  using each track's fade-in unless overridden. It does not start stopped tracks.
+- `SOUND_STOP [fade_ms]` keeps its original global stop behavior and also stops
+  soundtrack pads. Stopped tracks start from the beginning on the next press.
+
+The original SOUND command still plays overlapping one-shot effects. Global
+pause/resume controls apply to soundtrack pads, not these legacy one-shot effects.
+Loading a layout or unbinding a soundtrack stops it. Each soundtrack gets its
+own channel, so paused tracks are not stolen by new sound effects. Fade updates
+run independently of the GUI; state indicators refresh in the main window.
+
+## one-button play/pause (0.5.1)
+
+`SOUND_TRACK "filename" [volume] [play_fade_ms] [stop_fade_ms] [pause_fade_ms]`
+
+The same pad starts, pauses, and resumes a track. Play and resume use the
+play_fade_ms value. Pause uses pause_fade_ms. Stop all and the natural end use
+stop_fade_ms. All fades are independently configurable in the soundtrack dialog.
+The optional pause_fade_ms defaults to stop_fade_ms, preserving older bindings.
+
+The single Play / pause all toolbar button starts all soundtrack bindings if
+none are active, pauses playing tracks, and resumes paused tracks. It also
+lets you cancel an in-progress pause fade with a second press.

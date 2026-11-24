@@ -2,6 +2,7 @@ import threading, webbrowser, os, subprocess
 from time import sleep
 from functools import partial
 import lp_events, lp_colors, kb, sound, ms
+import track_commands
 
 COLOR_PRIMED = 5 #red
 COLOR_FUNC_KEYS_PRIMED = 9 #amber
@@ -12,6 +13,7 @@ import files
 
 VALID_COMMANDS = ["@ASYNC", "@SIMPLE", "@LOAD_LAYOUT", "STRING", "DELAY", "TAP", "PRESS", "RELEASE", "WEB", "WEB_NEW", "CODE", "SOUND", "SOUND_STOP", "WAIT_UNPRESSED", "M_MOVE", "M_SET", "M_SCROLL", "M_LINE", "M_LINE_MOVE", "M_LINE_SET", "LABEL", "IF_PRESSED_GOTO_LABEL", "IF_UNPRESSED_GOTO_LABEL", "GOTO_LABEL", "REPEAT_LABEL", "IF_PRESSED_REPEAT_LABEL", "IF_UNPRESSED_REPEAT_LABEL", "M_STORE", "M_RECALL", "M_RECALL_LINE", "OPEN", "RELEASE_ALL", "RESET_REPEATS"]
 ASYNC_HEADERS = ["@ASYNC", "@SIMPLE"]
+VALID_COMMANDS.extend(["SOUND_TRACK", "SOUND_PAUSE", "SOUND_RESUME"])
 
 threads = [[None for y in range(9)] for x in range(9)]
 running = False
@@ -241,6 +243,12 @@ def _run_script(script_str, x, y):
                         subprocess.run(args)
                     except Exception as e:
                         print("[scripts] " + coords + "    Error with running code: " + str(e))
+                elif split_line[0] == "SOUND_TRACK":
+                    sound.toggle_track((x, y), *track_commands.parse(line))
+                elif split_line[0] == "SOUND_PAUSE":
+                    sound.pause(track_commands.control_fade(line))
+                elif split_line[0] == "SOUND_RESUME":
+                    sound.resume(track_commands.control_fade(line))
                 elif split_line[0] == "SOUND":
                     if len(split_line) > 2:
                         print("[scripts] " + coords + "    Play sound file " + split_line[1] + " at volume " + str(split_line[2]))
@@ -527,6 +535,7 @@ def bind(x, y, script_down, color):
 
 def unbind(x, y):
     global to_run
+    sound.stop_track((x, y))
     lp_events.unbind(x, y)
     text[x][y] = ""
     if (x, y) in [l[1:] for l in to_run]:
@@ -592,6 +601,7 @@ def unbind_all():
     global threads
     global text
     global to_run
+    sound.stop_tracks()
     lp_events.unbind_all()
     text = [["" for y in range(9)] for x in range(9)]
     to_run = []
@@ -671,6 +681,18 @@ def validate_script(script_str):
                         return ("Headers must only be used on the first line of a script.", line)
                 if split_line[0] not in VALID_COMMANDS:
                     return ("Command '" + split_line[0] + "' not valid.", line)
+                if split_line[0] == "SOUND_TRACK":
+                    try:
+                        filename, *_ = track_commands.parse(line)
+                        if not os.path.isfile(sound.full_name(filename)) or not sound.is_valid(filename):
+                            return ("Soundtrack file is missing or cannot be decoded: " + filename, line)
+                    except (ValueError, TypeError) as error:
+                        return (str(error), line)
+                if split_line[0] in ("SOUND_PAUSE", "SOUND_RESUME"):
+                    try:
+                        track_commands.control_fade(line)
+                    except (ValueError, TypeError) as error:
+                        return (str(error), line)
                 if split_line[0] in ["STRING", "DELAY", "TAP", "PRESS", "RELEASE", "WEB", "WEB_NEW", "CODE", "SOUND", "M_MOVE", "M_SET", "M_SCROLL", "OPEN"]:
                     if len(split_line) < 2:
                         return ("Too few arguments for command '" + split_line[0] + "'.", line)

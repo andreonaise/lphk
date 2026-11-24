@@ -1,4 +1,4 @@
-LPHK 0.4.0
+LPHK 0.5.1
 
 Read README.md for installation and use.
 Windows prebuilt release: extract everything and open LPHK.exe.
@@ -7,3 +7,6 @@ MangoWM: first run bash install-linux-input.sh as your normal user.
 
 The prebuilt archives include Python and application dependencies.
 The source archive requires a development setup; see README.md.
+
+Demo mode: click Demo mode in the app, then Play pads.
+Soundtracks: edit a pad and choose Soundtrack... to set fade times.

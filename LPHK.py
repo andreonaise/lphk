@@ -131,20 +131,22 @@ def init():
             print("[LPHK] Debugging mode active! Will not shut down on window close.")
             print("[LPHK] Run shutdown() to manually close the program correctly.")
 
-        elif "--smoke-test" not in sys.argv:
+        elif "--smoke-test" not in sys.argv and '--demo' not in sys.argv:
             print("[LPHK] Invalid argument: " + sys.argv[1] + ". Ignoring...")
 
     print("Input backend:", BACKEND)
     if BACKEND == "wayland":
         from system_apis.input_wayland import controller
-        print(controller.check())
+        try:
+            print(controller.check())
+        except RuntimeError as error:
+            print('[input] Macro input is not ready; soundtrack/demo editing remains available:', error)
     files.init(USER_PATH)
     sound.init(USER_PATH)
 
 
 def shutdown():
-    if lp_events.timer is not None:
-        lp_events.timer.cancel()
+    lp_events.stop()
     scripts.to_run = []
     for x in range(9):
         for y in range(9):
@@ -154,13 +156,13 @@ def shutdown():
         for thread in row:
             if thread is not None and thread.is_alive():
                 thread.join(timeout=1)
+    sound.shutdown()
     try:
         kb.release_all()
     except Exception as error:
         print("[LPHK] Input cleanup failed:", error)
     if window.lp_connected:
         scripts.unbind_all()
-        lp_events.timer.cancel()
         launchpad_connector.disconnect(lp)
         window.lp_connected = False
     logger.stop()

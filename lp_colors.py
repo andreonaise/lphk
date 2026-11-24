@@ -3,6 +3,7 @@ color_modes = [["solid" for y in range(9)] for x in range(9)]
 
 import lp_events, scripts, window
 import colorsys
+import sound
 
 lp_object = None
 
@@ -117,6 +118,13 @@ def updateXY(x, y):
             else:
                 set_color = curr_colors[x][y]
                 color_modes[x][y] = "solid"
+
+            # Audio remains active after the short pad script has returned.
+            audio_colour = sound.visual((x, y))
+            if audio_colour is not None:
+                state = sound.snapshot()[(x, y)]['state']
+                set_color = 9 if state == 'paused' else audio_colour
+                color_modes[x][y] = 'pulse' if state == 'paused' else 'solid'
 
             if window.lp_mode == "Mk1":
                 if type(set_color) is int:
