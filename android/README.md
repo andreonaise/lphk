@@ -6,7 +6,7 @@ the apk includes the app and demo audio; you don't need python on your phone.
 
 ## installing
 
-copy `LPHK-Android-0.1.0.apk` to the phone and open it. android may ask you to
+copy `LPHK-Android-0.2.0.apk` to the phone and open it. android may ask you to
 allow installations from the app you used to open the file. install lphk,
 then open it normally.
 
@@ -24,6 +24,13 @@ switch back to **edit pads** and tap a pad to change its script and colour.
 **import audio / soundtrack** copies an audio file into the app. **soundtrack
 settings** lets you set volume and separate play/resume, pause, and stop/end
 fades. apply the settings, then save the pad.
+
+you can now use **build actions…** for the whole pad script. add an action,
+choose it from the list, fill in its settings, and arrange actions in order.
+edit, copy, remove, move up/down, and a keyboard-shortcut helper are included.
+apply the sequence to the pad editor, then save the pad. the forms cover all
+desktop commands too; those are marked desktop only and remain exportable.
+you don't need to write command syntax. the existing text editor is kept.
 
 the monitor below the grid shows the selected track, elapsed/total time,
 and its decoded waveform when the audio decoder supports it. tap the waveform
@@ -93,7 +100,7 @@ to a computer. it doesn't need root or an accessibility service.
 
 upload the repository files, including `android/` and `.github/`, to the repo.
 open **actions > build android apk > run workflow**. when it finishes, open
-the run and download the `LPHK-Android-0.1.0` artifact. extract it to get the apk.
+the run and download the `LPHK-Android-0.2.0` artifact. extract it to get the apk.
 the desktop windows/linux workflow remains separate.
 
 the workflow builds a development-signed apk unless release signing secrets
@@ -124,7 +131,7 @@ python android/build_apk.py
 
 the script compiles the java source, runs the protocol/parser checks, builds
 the dex/resources, signs the apk, and verifies its signature. the result is
-`android/build/LPHK-Android-0.1.0.apk`. there are no third-party app libraries
+`android/build/LPHK-Android-0.2.0.apk`. there are no third-party app libraries
 or gradle dependencies. build output and local signing keys are excluded
 from the source export.
 

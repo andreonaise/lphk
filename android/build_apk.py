@@ -61,7 +61,7 @@ if not key.exists():
         '-dname', 'CN=Android Debug,O=Android,C=US')
 # Pass a keystore password through the environment rather than the process arguments.
 os.environ['LPHK_SIGN_PASSWORD'] = password
-destination = BUILD / 'LPHK-Android-0.1.0.apk'
+destination = BUILD / 'LPHK-Android-0.2.0.apk'
 run(java_tool('java'), '-jar', TOOLS / 'lib/apksigner.jar', 'sign', '--ks', key,
     '--ks-key-alias', alias, '--ks-pass', 'env:LPHK_SIGN_PASSWORD', '--key-pass', 'env:LPHK_SIGN_PASSWORD',
     '--out', destination, BUILD / 'aligned.apk')

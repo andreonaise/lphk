@@ -23,7 +23,7 @@ final class ScriptEngine {
         List<List<String>> lines=new ArrayList<>(); Map<String,Integer> labels=new HashMap<>();
         try {
             for(String line:text.split("\\r?\\n")) {
-                line=line.trim(); if(line.isEmpty()||line.startsWith("#")) continue;
+                line=line.trim(); if(line.isEmpty()||line.startsWith("#")||line.startsWith("-")) continue;
                 List<String> words=ScriptSyntax.words(line); ScriptSyntax.validateLocal(words);
                 if(words.get(0).equals("LABEL")) labels.put(words.get(1),lines.size());
                 lines.add(words);
@@ -71,7 +71,7 @@ final class ScriptEngine {
             case "SOUND": a.oneShot(w.get(1),argument(w,2,100)); break;
             case "SOUND_PAUSE": a.pauseAll(argument(w,1,-1)); break;
             case "SOUND_RESUME": a.resumeAll(argument(w,1,-1)); break;
-            case "SOUND_STOP": a.stopAll(argument(w,1,-1)); break;
+            case "SOUND_STOP": a.stopAll(argument(w,1,0)); break;
             case "SOUND_SKIP": case "SOUND_SEEK":
                 a.seek(w.size()==4?page+":"+w.get(2)+":"+w.get(3):null,Double.parseDouble(w.get(1)),c.equals("SOUND_SKIP")); break;
             case "PAGE": app.switchPage(app.layout.resolve(w.get(1))); break;

@@ -5,6 +5,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 ROOT_FILES = {
+    'script_builder.py', 'script_builder_ui.py',
     'audio_waveform.py',
     'app_settings.py', 'page_state.py', 'command_guide.py', 'track_monitor.py',
     'app_updater.py', 'update_dialog.py',

@@ -4,9 +4,12 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from PyInstaller.archive.readers import CArchiveReader
 
 ROOT = Path(__file__).resolve().parents[1]
 executable = ROOT / 'dist/LPHK' / ('LPHK.exe' if sys.platform == 'win32' else 'LPHK')
+modules = CArchiveReader(str(executable)).open_embedded_archive('PYZ.pyz').toc
+assert {'script_builder', 'script_builder_ui'} <= set(modules), 'Visual builder modules missing from the packaged app'
 with tempfile.TemporaryDirectory() as directory:
     environment = os.environ.copy()
     environment.update(LPHK_USER_PATH=directory, SDL_AUDIODRIVER='dummy',

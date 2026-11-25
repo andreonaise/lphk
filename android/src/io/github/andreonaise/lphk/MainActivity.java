@@ -34,6 +34,7 @@ public class MainActivity extends Activity {
     final ArrayList<String> trackKeys=new ArrayList<>();
     String trackSignature="";
     EditText pendingScript;
+    java.util.function.Consumer<String> pendingAudioSelection;
     boolean busy;
     static final int IMPORT=11,AUDIO=12,EXPORT=13,BUNDLE=14;
     static final int BG=0xff17191b,TEXT=0xffe1e6e9,MUTED=0xff9ca9b1;
@@ -148,7 +149,8 @@ public class MainActivity extends Activity {
         LinearLayout swatches=row(); body.addView(swatches);
         int[] colours={0xff599673,0xff537eaa,0xffbd9557,0xffa65757,0xff836ca6,0xff000000};
         for(int c:colours) { Button b=button("",()->color.setText(String.format(Locale.ROOT,"#%06x",c&0xffffff))); b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(c)); weighted(swatches,b); }
-        body.addView(button("Import audio / soundtrack…",()->{pendingScript=script; pick(AUDIO,"audio/*");}));
+        body.addView(button("Build actions…",()->{try {new ActionBuilder(this,script);} catch(Exception e) {error(e.getMessage());}}));
+        body.addView(button("Import audio / soundtrack…",()->{pendingAudioSelection=null; pendingScript=script; pick(AUDIO,"audio/*");}));
         body.addView(button("Soundtrack settings…",()->soundtrackSettings(script)));
         body.addView(button("Command guide…",()->guide(script)));
         ScrollView scroll=new ScrollView(this); scroll.addView(body);
@@ -246,7 +248,7 @@ public class MainActivity extends Activity {
                 case 7: confirmReplace(()->{resetRuntime(); demoLayout(); persist(); refresh();}); break;
                 case 8: confirmReplace(()->{resetRuntime(); layout=new LayoutData(); persist(); refresh();}); break;
                 case 9: midi.close(); message("Touchscreen mode · Launchpad disconnected"); break;
-                case 10: new AlertDialog.Builder(this).setTitle("LPHK Android 0.1.0").setMessage("A standalone touchscreen soundboard and Launchpad Mini layout editor.\n\nScripts run in this app while connected; they are not stored as programs inside the Launchpad. Desktop keyboard/mouse commands remain editable and exportable.\n\nAudio pauses when the app leaves the foreground.\n\nBased on Ella Jameson (nimaid)'s LPHK. GPL-3.0.\nSource: github.com/andreonaise/lphk").setPositiveButton("Close",null).show(); break;
+                case 10: new AlertDialog.Builder(this).setTitle("LPHK Android 0.2.0").setMessage("A standalone touchscreen soundboard and Launchpad Mini layout editor.\n\nScripts run in this app while connected; they are not stored as programs inside the Launchpad. Desktop keyboard/mouse commands remain editable and exportable.\n\nAudio pauses when the app leaves the foreground.\n\nBased on Ella Jameson (nimaid)'s LPHK. GPL-3.0.\nSource: github.com/andreonaise/lphk").setPositiveButton("Close",null).show(); break;
             }
         }).show();
     }
@@ -299,7 +301,7 @@ public class MainActivity extends Activity {
                 file.getParentFile().mkdirs();
                 try(InputStream in=getContentResolver().openInputStream(uri);OutputStream out=new FileOutputStream(file)) { copy(in,out,200L*1024*1024); }
                 final String sound=path;
-                handler.post(()->{if(pendingScript!=null) pendingScript.setText("SOUND_TRACK \""+sound+"\" 80 1500 2000 500"); message("Imported "+sound+" · save the pad to keep its binding");});
+                handler.post(()->{if(pendingAudioSelection!=null) {java.util.function.Consumer<String> selection=pendingAudioSelection; pendingAudioSelection=null; selection.accept(sound);} else if(pendingScript!=null) pendingScript.setText("SOUND_TRACK \""+sound+"\" 80 1500 2000 500"); message("Imported "+sound+" · save the pad to keep its binding");});
             } catch(Exception e) { if(file!=null) file.delete(); error(e.getMessage()); } });
         } else if(request==EXPORT||request==BUNDLE) {
             try {
