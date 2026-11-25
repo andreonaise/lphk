@@ -193,3 +193,26 @@ The optional pause_fade_ms defaults to stop_fade_ms, preserving older bindings.
 The single Play / pause all toolbar button starts all soundtrack bindings if
 none are active, pauses playing tracks, and resumes paused tracks. It also
 lets you cancel an in-progress pause fade with a second press.
+
+
+## seeking and pages (0.6.0)
+
+- `SOUND_SKIP seconds [x y]` moves forward or backward relative to the current
+  playhead. use a negative number for backward, e.g. `SOUND_SKIP -5`.
+- `SOUND_SEEK seconds [x y]` jumps to an absolute position in seconds.
+  `SOUND_SEEK 90 0 1` seeks pad 0,1 on the script's page to 01:30.
+- without coordinates, seeking applies to all active soundtrack tracks across
+  pages. with coordinates, it targets that pad on the script's page. decimal
+  seconds are allowed. seeking a paused track keeps it paused. positions are
+  clamped to the start/end of the track.
+- `PAGE "name"` selects a page by name. `PAGE 2` selects the second page
+  (page numbers start at one).
+- `PAGE_NEXT` and `PAGE_PREV` cycle through pages, wrapping at either end.
+
+page commands finish the current script; put actions for the new page on its
+own pads. switching pages cancels old scripts and releases held input, while
+soundtracks keep playing. pages share the 81 simultaneous soundtrack channels.
+loading a different layout stops the previous layout's tracks.
+
+the built-in command guide under help includes all commands, with searchable
+syntax, explanations, and copyable examples.

@@ -67,13 +67,13 @@ try:
         scripts.bind(0, 1, 'SOUND_TRACK examples/demo_track.wav 70 80 100', [70, 120, 90])
 
         def press():
-            app.click(SimpleNamespace(x=25, y=75))
+            app.click(SimpleNamespace(x=25 * app.canvas_scale[0], y=75 * app.canvas_scale[1]))
             app.release_play_pad()
 
         press()
         wait_for(lambda: sound.snapshot().get((0, 1), {}).get('state') == 'playing')
         wait_for(lambda: scripts.threads[0][1] is not None and not scripts.threads[0][1].is_alive())
-        clip = sound.player.tracks[0, 1].sound
+        clip = sound.player.tracks[sound.pad_key((0, 1))].sound
         press()
         wait_for(lambda: sound.snapshot()[0, 1]['state'] == 'paused')
         paused_at = sound.snapshot()[0, 1]['position']
@@ -85,7 +85,7 @@ try:
         press()
         wait_for(lambda: sound.snapshot()[0, 1]['state'] == 'playing')
         assert sound.snapshot()[0, 1]['position'] >= paused_at
-        assert sound.player.tracks[0, 1].sound is clip
+        assert sound.player.tracks[sound.pad_key((0, 1))].sound is clip
         sound.stop_faded()
         wait_for(lambda: sound.snapshot()[0, 1]['state'] == 'stopped')
         app.audio_tick()

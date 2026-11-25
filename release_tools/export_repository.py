@@ -5,6 +5,9 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 ROOT_FILES = {
+    'audio_waveform.py',
+    'app_settings.py', 'page_state.py', 'command_guide.py', 'track_monitor.py',
+    'app_updater.py', 'update_dialog.py',
     'audio_tracks.py', 'track_commands.py', 'demo_launchpad.py', 'soundtrack_ui.py',
     'LPHK.py', 'bresenham.py', 'files.py', 'kb.py', 'logger.py', 'lp_colors.py',
     'lp_events.py', 'ms.py', 'scripts.py', 'sound.py', 'window.py', 'ui_theme.py',
@@ -15,7 +18,7 @@ ROOT_FILES = {
     'RUN_with_local_venv.bat', 'SETUP.sh', 'RUN.bash', 'SETUP_CACHYOS.sh',
     'install-linux-input.sh', 'START_HERE.txt', 'CACHYOS_MANGOWM.txt',
 }
-DIRECTORIES = ('.github', 'system_apis', 'resources', 'docs', 'release_tools',
+DIRECTORIES = ('.github', 'android', 'system_apis', 'resources', 'docs', 'release_tools',
                'tests', 'user_layouts/examples', 'user_scripts/examples', 'user_sounds/examples')
 
 
@@ -26,7 +29,7 @@ def export(destination):
         shutil.copy2(ROOT / name, destination / name)
     for name in DIRECTORIES:
         shutil.copytree(ROOT / name, destination / name, dirs_exist_ok=True,
-                        ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
+                        ignore=shutil.ignore_patterns('__pycache__', '*.pyc', 'build', '.keys', '*.keystore', '*.apk', '*.idsig'))
     (destination / 'utils').mkdir(exist_ok=True)
     shutil.copy2(ROOT / 'utils/launchpad_connector.py', destination / 'utils/launchpad_connector.py')
     # Source archives created on Windows must still contain POSIX shell lines.

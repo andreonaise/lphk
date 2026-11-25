@@ -54,7 +54,7 @@ try:
         assert all(button.cget('state') == 'normal' for button in app.layout_buttons)
 
         def click(x, y):
-            app.click(SimpleNamespace(x=25 + x * 50, y=25 + y * 50))
+            app.click(SimpleNamespace(x=(25 + x * 50) * app.canvas_scale[0], y=(25 + y * 50) * app.canvas_scale[1]))
 
         scripts.bind(0, 1, 'TAP a', [45, 95, 145])
         app.set_mode('copy')

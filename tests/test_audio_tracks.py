@@ -14,6 +14,55 @@ import track_commands
 
 
 class TrackTests(unittest.TestCase):
+    def test_same_pad_on_different_pages_has_independent_channels(self):
+        a, b, c = ('a', 0, 1), ('b', 0, 1), ('c', 0, 1)
+        self.player.toggle(a, 'song.wav')
+        self.player.toggle(b, 'song.wav')
+        self.assertNotEqual(self.player.tracks[a].channel_index, self.player.tracks[b].channel_index)
+        self.player.pause(a)
+        self.assertEqual(self.player.snapshot()[b]['state'], 'playing')
+        self.player.stop(a)
+        self.player.toggle(c, 'song.wav')
+        channel = self.player.tracks[c].channel
+        channel.reset_mock()
+        self.player.toggle(a, 'song.wav')
+        channel.stop.assert_not_called()
+
+    def prepare_pcm(self):
+        self.mixer.get_init.return_value = (10, -16, 1)
+        self.mixer.Sound.return_value.get_raw.return_value = bytes(range(200)) * 2
+
+    def test_seek_uses_full_pcm_and_preserves_paused_state(self):
+        self.prepare_pcm()
+        self.player.toggle(self.pad, 'song.wav')
+        self.player.pause(self.pad)
+        self.player.seek(self.pad, 5)
+        self.assertEqual(self.player.snapshot()[self.pad]['position'], 5)
+        self.assertEqual(self.player.snapshot()[self.pad]['state'], 'paused')
+        self.assertEqual(len(self.mixer.Sound.call_args.kwargs['buffer']), 300)
+        self.player.seek(self.pad, 2)
+        self.assertEqual(len(self.mixer.Sound.call_args.kwargs['buffer']), 360)
+        self.assertEqual(self.player.snapshot()[self.pad]['position'], 2)
+
+    def test_skip_clamps_to_start_and_end(self):
+        self.prepare_pcm()
+        self.player.toggle(self.pad, 'song.wav')
+        self.player.seek(self.pad, -100, relative=True)
+        self.assertEqual(self.player.snapshot()[self.pad]['position'], 0)
+        self.player.seek(self.pad, 100, relative=True)
+        self.assertEqual(self.player.snapshot()[self.pad]['state'], 'stopped')
+        self.assertEqual(self.player.snapshot()[self.pad]['position'], 20)
+
+    def test_seek_back_cancels_natural_end_fade(self):
+        self.prepare_pcm()
+        self.player.toggle(self.pad, 'song.wav', 100, 0, 5000)
+        self.advance(18)
+        self.assertEqual(self.player.snapshot()[self.pad]['state'], 'fading_out')
+        self.player.seek(self.pad, 1)
+        self.assertEqual(self.player.snapshot()[self.pad]['state'], 'playing')
+        self.advance(2)
+        self.assertEqual(self.player.snapshot()[self.pad]['state'], 'playing')
+
     def test_one_global_button_starts_pauses_and_resumes(self):
         bindings = {self.pad: ('song.wav', 80, 1000, 4000, 500)}
         self.assertEqual(self.player.toggle_all(bindings), 'play')
@@ -203,6 +252,26 @@ class CommandTests(unittest.TestCase):
 
 
 class ActualMixerTests(unittest.TestCase):
+    def test_real_pcm_seek_keeps_paused_state_and_changes_audio_segment(self):
+        import sound
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {'SDL_AUDIODRIVER': 'dummy'}):
+            self.make_clip(directory)
+            sound.init(directory)
+            try:
+                sound.toggle_track((0, 1), 'tone.wav', 70)
+                key = sound.pad_key((0, 1))
+                sound.player.pause(key, 0)
+                sound.player.seek(key, 1)
+                self.assertEqual(sound.player.snapshot()[key]['state'], 'paused')
+                self.assertAlmostEqual(sound.player.tracks[key].sound.get_length(), 2, delta=0.02)
+                sound.player.seek(key, 0.5)
+                self.assertAlmostEqual(sound.player.tracks[key].sound.get_length(), 2.5, delta=0.02)
+                self.assertAlmostEqual(sound.player.snapshot()[key]['position'], 0.5, delta=0.02)
+                sound.player.resume(key, 0)
+                self.assertEqual(sound.player.snapshot()[key]['state'], 'playing')
+            finally:
+                sound.shutdown()
+
     def make_clip(self, directory):
         path = Path(directory) / 'user_sounds/tone.wav'
         path.parent.mkdir()
