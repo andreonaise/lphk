@@ -4,6 +4,11 @@ from PIL import ImageTk, Image
 import os, sys
 from functools import partial
 import webbrowser
+import queue
+from copy import deepcopy
+from tkinter import ttk, simpledialog, messagebox
+import page_state
+import app_settings
 import ui_theme as theme
 
 import scripts, files, lp_colors, lp_events
@@ -91,6 +96,12 @@ class Main_Window(tk.Frame):
         self.run_mode = False
         self.held_demo_pad = None
         self._audio_signature = None
+        self.actions = queue.Queue()
+        self.user_path, self.version = USER_PATH, VERSION
+        self.settings = app_settings.load(USER_PATH)
+        self.monitor = None
+        self.canvas_scale = (1.0, 1.0)
+        self.fullscreen = False
         self.init_window()
 
         self.about_image = ImageTk.PhotoImage(Image.open(PATH + "/resources/LPHK-banner.png"))
@@ -105,6 +116,10 @@ class Main_Window(tk.Frame):
         self.last_clicked = None
         self.outline_box = None
         self.after(50, self.audio_tick)
+        self.master.bind('<F11>', self.toggle_fullscreen)
+        self.master.bind('<Escape>', self.exit_fullscreen)
+        if self.settings.get('fullscreen') is True:
+            self.after(100, self.toggle_fullscreen)
 
     def init_window(self):
         global root
@@ -119,6 +134,7 @@ class Main_Window(tk.Frame):
         self.m_Launchpad.add_command(label="Redetect (Restart)", command=self.redetect_lp)
         self.m_Launchpad.add_command(label="Demo mode (no Launchpad)", command=self.connect_dummy)
         self.m_Launchpad.add_command(label="Load soundtrack demo", command=self.load_soundtrack_demo)
+        self.m_Launchpad.add_command(label="Fullscreen (F11)", command=self.toggle_fullscreen)
         self.m.add_cascade(label="Launchpad", menu=self.m_Launchpad)
 
         self.m_Layout = tk.Menu(self.m, tearoff=False)
@@ -135,6 +151,8 @@ class Main_Window(tk.Frame):
         self.m_Help.add_command(label="Open README...", command=open_readme)
         open_scripting = lambda: self.show_help("LPHKscript reference", "docs/SCRIPTING.md")
         self.m_Help.add_command(label="Scripting Help...", command=open_scripting)
+        self.m_Help.add_command(label='Command guide', command=self.open_guide)
+        self.m_Help.add_command(label='Check for updates', command=self.open_updates)
         open_user_folder = lambda: files.open_file_folder(USER_PATH)
         self.m_Help.add_command(label="User Folder...", command=open_user_folder)
         open_prog_folder = lambda: files.open_file_folder(PROG_PATH)
@@ -149,18 +167,41 @@ class Main_Window(tk.Frame):
         tk.Label(header, text="Launchpad Hotkey", fg=theme.MUTED).pack(side="left", padx=14, pady=(9, 0))
         theme.button(header, "Reconnect", self.redetect_lp).pack(side="right")
         theme.button(header, "Demo mode", self.connect_dummy).pack(side="right", padx=(0, 8))
+        theme.button(header, 'Fullscreen', self.toggle_fullscreen).pack(side='right', padx=(0, 8))
+        theme.button(header, 'Update', self.open_updates).pack(side='right', padx=(0, 8))
+
+        pages_bar = tk.Frame(self)
+        pages_bar.grid(row=1, column=0, columnspan=2, sticky='ew', padx=24, pady=(0, 14))
+        tk.Label(pages_bar, text='PAGE', fg=theme.MUTED).pack(side='left', padx=(0, 10))
+        theme.button(pages_bar, '‹', lambda: self.switch_page('PAGE_PREV')).pack(side='left')
+        self.page_combo = ttk.Combobox(pages_bar, state='readonly', width=20)
+        self.page_combo.pack(side='left', padx=6)
+        self.page_combo.bind('<<ComboboxSelected>>', lambda event: self.switch_page(self.page_combo.current()))
+        theme.button(pages_bar, '›', lambda: self.switch_page('PAGE_NEXT')).pack(side='left')
+        theme.button(pages_bar, '+ Page', self.add_page).pack(side='left', padx=(12, 6))
+        theme.button(pages_bar, 'Rename', self.rename_page).pack(side='left')
+        theme.button(pages_bar, 'Delete', self.delete_page).pack(side='left', padx=6)
+        self.refresh_pages()
 
         c_gap = int(BUTTON_SIZE // 4)
 
         c_size = (BUTTON_SIZE * 9) + (c_gap * 9)
-        self.c = tk.Canvas(self, width=c_size, height=c_size, bd=0)
+        self.columnconfigure(0, weight=1)
+        self.columnconfigure(1, weight=0)
+        self.rowconfigure(2, weight=1)
+        self.pad_frame = tk.Frame(self, width=c_size, height=c_size, bg=theme.BG)
+        self.pad_frame.grid(row=2, column=0, sticky='nsew', padx=(24, 20), pady=(0, 14))
+        self.pad_frame.grid_propagate(False)
+        self.c = tk.Canvas(self.pad_frame, width=c_size, height=c_size, bd=0)
         self.c.bind("<Button-1>", self.click)
         self.master.bind("<ButtonRelease-1>", self.release_play_pad, add='+')
-        self.c.grid(row=1, column=0, padx=(24, 20), pady=(0, 20))
+        self.c.place(relx=0.5, rely=0.5, anchor='center', width=c_size, height=c_size)
+        self.pad_frame.bind('<Configure>', self.resize_launchpad)
+        self.c.bind('<Configure>', self.scale_canvas)
         self.draw_empty_state()
 
         sidebar = tk.Frame(self, width=220)
-        sidebar.grid(row=1, column=1, sticky="nsew", padx=(0, 24), pady=(0, 20))
+        sidebar.grid(row=2, column=1, sticky="nsew", padx=(0, 24), pady=(0, 20))
         sidebar.columnconfigure(0, weight=1)
         tk.Label(sidebar, text="LAYOUT", fg=theme.MUTED, anchor="w").grid(row=0, column=0, sticky="ew")
         self.layout_name = tk.Label(sidebar, text="Untitled", anchor="w", wraplength=210,
@@ -193,15 +234,126 @@ class Main_Window(tk.Frame):
 
         self.stat = tk.Label(self, text="No Launchpad connected", bg=STAT_INACTIVE_COLOR,
                              fg=theme.MUTED, anchor="w", padx=24, pady=12)
-        self.stat.grid(row=3, column=0, columnspan=2, sticky=tk.EW)
+        self.stat.grid(row=5, column=0, columnspan=2, sticky=tk.EW)
         transport = tk.Frame(self)
-        transport.grid(row=2, column=0, columnspan=2, sticky='ew', padx=24, pady=(0, 16))
+        transport.grid(row=4, column=0, columnspan=2, sticky='ew', padx=24, pady=(0, 12))
         self.transport_toggle = theme.button(transport, 'Play / pause all', self.toggle_audio_all)
         self.transport_toggle.pack(side='left', padx=(0, 8))
         for label, command in (("Stop all", sound.stop_faded),):
             theme.button(transport, label, command).pack(side='left', padx=(0, 8))
         self.audio_status = tk.Label(transport, text='no soundtracks playing', fg=theme.MUTED)
         self.audio_status.pack(side='right')
+        self.open_monitor()
+
+    def resize_launchpad(self, event):
+        size = max(90, min(event.width, event.height))
+        self.c.place_configure(width=size, height=size)
+
+    def scale_canvas(self, event):
+        base = (BUTTON_SIZE + BUTTON_SIZE // 4) * 9
+        scale = event.width / base, event.height / base
+        self.c.scale('all', 0, 0, scale[0] / self.canvas_scale[0], scale[1] / self.canvas_scale[1])
+        self.canvas_scale = scale
+
+    def toggle_fullscreen(self, event=None):
+        self.fullscreen = not self.fullscreen
+        self.master.attributes('-fullscreen', self.fullscreen)
+        self.settings['fullscreen'] = self.fullscreen
+        try:
+            app_settings.save(self.user_path, self.settings)
+        except OSError as error:
+            print('[settings] Could not save fullscreen preference:', error)
+        return 'break'
+
+    def exit_fullscreen(self, event=None):
+        if self.fullscreen:
+            return self.toggle_fullscreen()
+
+    def open_updates(self):
+        import update_dialog
+        update_dialog.open_dialog(self)
+
+    def open_guide(self, editor=None):
+        import command_guide
+        return command_guide.open_guide(self, editor)
+
+    def open_monitor(self):
+        import track_monitor
+        if self.monitor is None or not self.monitor.alive():
+            self.monitor = track_monitor.TrackMonitor(self)
+        return self.monitor
+
+    def refresh_pages(self):
+        if hasattr(self, 'page_combo'):
+            self.page_combo.configure(values=[page['name'] for page in page_state.book.pages])
+            self.page_combo.current(page_state.book.active)
+
+    def show_current_page(self):
+        scripts.cancel_for_page_change()
+        self.release_play_pad()
+        sound.set_page(page_state.book.current['id'])
+        buttons = page_state.book.current['buttons']
+        scripts.text = [[button['text'] for button in column] for column in buttons]
+        lp_colors.curr_colors = [[deepcopy(button['color']) for button in column] for column in buttons]
+        for x in range(9):
+            for y in range(9):
+                script = scripts.text[x][y]
+                lp_events.press_funcs[x][y] = partial(scripts.schedule_script, script, x, y) if script else lp_events.unbound_press
+                if script:
+                    # Hardware passes x/y to the callback; page coordinates are captured.
+                    lp_events.press_funcs[x][y] = lambda a, b, text=script, px=x, py=y: scripts.schedule_script(text, px, py)
+        if lp_connected:
+            lp_colors.update_all()
+            self.clear_canvas()
+            self.draw_canvas()
+        self._audio_signature = None
+        self.refresh_pages()
+        self.update_sidebar()
+
+    def switch_page(self, target):
+        try:
+            page_state.book.capture(scripts.text, lp_colors.curr_colors)
+            if target in ('PAGE_NEXT', 'PAGE_PREV'):
+                target = (page_state.book.active + (1 if target == 'PAGE_NEXT' else -1)) % len(page_state.book.pages)
+            if page_state.book.resolve(target) == page_state.book.active:
+                return
+            page_state.book.activate(target)
+            self.show_current_page()
+            files.layout_changed_since_load = True
+        except ValueError as error:
+            messagebox.showerror('Could not change page', str(error), parent=self)
+
+    def add_page(self, name=None):
+        if name is None:
+            name = simpledialog.askstring('New page', 'Page name:', parent=self)
+        if name:
+            try:
+                page_state.book.capture(scripts.text, lp_colors.curr_colors)
+                index = page_state.book.add(name)
+                page_state.book.activate(index)
+                self.show_current_page()
+                files.layout_changed_since_load = True
+            except ValueError as error:
+                messagebox.showerror('Could not add page', str(error), parent=self)
+
+    def rename_page(self):
+        name = simpledialog.askstring('Rename page', 'Page name:', initialvalue=page_state.book.current['name'], parent=self)
+        if name:
+            try:
+                page_state.book.rename(name)
+                self.refresh_pages()
+                files.layout_changed_since_load = True
+            except ValueError as error:
+                messagebox.showerror('Could not rename page', str(error), parent=self)
+
+    def delete_page(self):
+        if len(page_state.book.pages) == 1:
+            return
+        if messagebox.askyesno('Delete page', 'Delete this page and stop its tracks?', parent=self):
+            removed = page_state.book.remove()
+            sound.stop_page(removed)
+            self.show_current_page()
+            files.layout_changed_since_load = True
 
     def toggle_audio_all(self):
         import track_commands
@@ -234,6 +386,17 @@ class Main_Window(tk.Frame):
 
     def audio_tick(self):
         try:
+            for _ in range(30):
+                try:
+                    action, value = self.actions.get_nowait()
+                except queue.Empty:
+                    break
+                if action == 'page':
+                    previous_generation = page_state.book.generation
+                    self.switch_page(value)
+                    if previous_generation == page_state.book.generation:
+                        scripts.running = False
+                        scripts.run_next()
             sound.tick()
             states = sound.snapshot()
             signature = tuple((pad, state['state'], round(state['gain'] * 20)) for pad, state in states.items())
@@ -245,9 +408,12 @@ class Main_Window(tk.Frame):
                 if self.grid_drawn:
                     self.draw_canvas()
                 self._audio_signature = signature
-            playing = sum(state['state'] not in ('paused', 'stopped') for state in states.values())
-            paused = sum(state['state'] == 'paused' for state in states.values())
+            all_states = sound.all_snapshot()
+            playing = sum(state['state'] not in ('paused', 'stopped') for state in all_states.values())
+            paused = sum(state['state'] == 'paused' for state in all_states.values())
             self.audio_status.configure(text=f'{playing} playing / {paused} paused' if playing or paused else 'no soundtracks playing')
+            if self.monitor is not None and self.monitor.alive():
+                self.monitor.refresh()
         except Exception as error:
             print('[sound] Update failed:', error)
         if not root_destroyed:
@@ -283,9 +449,9 @@ class Main_Window(tk.Frame):
 
     def draw_empty_state(self):
         size = (BUTTON_SIZE + BUTTON_SIZE // 4) * 9
-        self.c.create_text(size / 2, size / 2 - 14, text="Connect a Launchpad",
+        self.c.create_text(size / 2 * self.canvas_scale[0], size / 2 * self.canvas_scale[1] - 14, text="Connect a Launchpad",
                            fill=theme.TEXT, font=(theme.FONT, 15, "bold"), tags="empty")
-        self.c.create_text(size / 2, size / 2 + 18, text="Your pads will appear here.",
+        self.c.create_text(size / 2 * self.canvas_scale[0], size / 2 * self.canvas_scale[1] + 18, text="Your pads will appear here.",
                            fill=theme.MUTED, font=(theme.FONT, 10), tags="empty")
 
     def show_help(self, title, relative_path):
@@ -443,6 +609,9 @@ class Main_Window(tk.Frame):
         if prompt_save:
             self.modified_layout_save_prompt()
         scripts.unbind_all()
+        page_state.book.reset()
+        sound.set_page(page_state.book.current['id'])
+        self.refresh_pages()
         files.curr_layout = None
         self.draw_canvas()
 
@@ -477,8 +646,8 @@ class Main_Window(tk.Frame):
         gap = int(BUTTON_SIZE // 4)
 
 
-        column = min(8, int(event.x // (BUTTON_SIZE + gap)))
-        row = min(8, int(event.y // (BUTTON_SIZE + gap)))
+        column = max(0, min(8, int(event.x / self.canvas_scale[0] // (BUTTON_SIZE + gap))))
+        row = max(0, min(8, int(event.y / self.canvas_scale[1] // (BUTTON_SIZE + gap))))
 
         if self.grid_drawn:
             if(column, row) == (8, 0):
@@ -569,6 +738,8 @@ class Main_Window(tk.Frame):
                 else:
                     self.outline_box = self.c.create_rectangle(x_start, y_start, x_end, y_end, fill=SELECT_COLOR, outline="")
                 self.c.tag_lower(self.outline_box)
+                if self.grid_drawn:
+                    self.c.scale(self.outline_box, 0, 0, *self.canvas_scale)
         else:
             if self.outline_box != None:
                 self.c.delete(self.outline_box)
@@ -608,6 +779,7 @@ class Main_Window(tk.Frame):
                                                     fill=theme.MUTED, font=(theme.FONT, 9))
 
             self.grid_drawn = True
+            self.c.scale('all', 0, 0, *self.canvas_scale)
 
     def pad_display_color(self, x, y):
         colour = sound.visual((x, y))
@@ -714,6 +886,7 @@ class Main_Window(tk.Frame):
             import soundtrack_ui
             soundtrack_ui.open_settings(w, t, USER_PATH)
         theme.button(properties, 'Soundtrack...', soundtrack_settings).pack(fill='x', pady=(12, 0))
+        theme.button(properties, 'Command guide', lambda: self.open_guide(t)).pack(fill='x', pady=(8, 0))
 
         unbind_func = lambda: self.unbind_destroy(x, y, w)
         unbind_button = tk.Button(properties, text="Unbind Button (" + str(x) + ", " + str(y) + ")", command=unbind_func)
@@ -959,7 +1132,9 @@ def make():
     theme.apply(root)
     root_destroyed = False
     root.protocol("WM_DELETE_WINDOW", close)
-    root.resizable(False, False)
+    root.resizable(True, True)
+    root.minsize(760, 620)
+    root.geometry(f"900x{min(860, max(620, root.winfo_screenheight() - 100))}")
     if MAIN_ICON != None:
         if os.path.splitext(MAIN_ICON)[1].lower() == ".gif":
             root.call('wm', 'iconphoto', root._w, tk.PhotoImage(file=MAIN_ICON))

@@ -3,6 +3,8 @@ from time import sleep
 from functools import partial
 import lp_events, lp_colors, kb, sound, ms
 import track_commands
+import page_state
+import math
 
 COLOR_PRIMED = 5 #red
 COLOR_FUNC_KEYS_PRIMED = 9 #amber
@@ -14,6 +16,7 @@ import files
 VALID_COMMANDS = ["@ASYNC", "@SIMPLE", "@LOAD_LAYOUT", "STRING", "DELAY", "TAP", "PRESS", "RELEASE", "WEB", "WEB_NEW", "CODE", "SOUND", "SOUND_STOP", "WAIT_UNPRESSED", "M_MOVE", "M_SET", "M_SCROLL", "M_LINE", "M_LINE_MOVE", "M_LINE_SET", "LABEL", "IF_PRESSED_GOTO_LABEL", "IF_UNPRESSED_GOTO_LABEL", "GOTO_LABEL", "REPEAT_LABEL", "IF_PRESSED_REPEAT_LABEL", "IF_UNPRESSED_REPEAT_LABEL", "M_STORE", "M_RECALL", "M_RECALL_LINE", "OPEN", "RELEASE_ALL", "RESET_REPEATS"]
 ASYNC_HEADERS = ["@ASYNC", "@SIMPLE"]
 VALID_COMMANDS.extend(["SOUND_TRACK", "SOUND_PAUSE", "SOUND_RESUME"])
+VALID_COMMANDS.extend(["SOUND_SKIP", "SOUND_SEEK", "PAGE", "PAGE_NEXT", "PAGE_PREV"])
 
 threads = [[None for y in range(9)] for x in range(9)]
 running = False
@@ -21,12 +24,15 @@ to_run = []
 text = [["" for y in range(9)] for x in range(9)]
 
 def check_kill(x, y, is_async, killfunc=None):
+    global running
     coords = "(" + str(x) + ", " + str(y) + ")"
 
-    if threads[x][y].kill.is_set():
+    current = threading.current_thread()
+    context_changed = hasattr(current, 'page_generation') and current.page_generation != page_state.book.generation
+    kill = getattr(current, 'kill', None) or getattr(threads[x][y], 'kill', None)
+    if context_changed or (kill is not None and kill.is_set()):
         print("[scripts] " + coords + " Recieved exit flag, script exiting...")
-        threads[x][y].kill.clear()
-        if not is_async:
+        if not is_async and not context_changed:
             running = False
         if killfunc:
             killfunc()
@@ -80,11 +86,15 @@ def schedule_script(script_in, x, y):
         print("[scripts] " + coords + " Starting asynchronous script in background...")
         threads[x][y] = threading.Thread(target=run_script, args=(script_in,x,y))
         threads[x][y].kill = threading.Event()
+        threads[x][y].page_id = page_state.book.current['id']
+        threads[x][y].page_generation = page_state.book.generation
         threads[x][y].start()
     elif not running:
         print("[scripts] " + coords + " No script running, starting script in background...")
         threads[x][y] = threading.Thread(target=run_script_and_run_next, args=(script_in,x,y))
         threads[x][y].kill = threading.Event()
+        threads[x][y].page_id = page_state.book.current['id']
+        threads[x][y].page_generation = page_state.book.generation
         threads[x][y].start()
     else:
         print("[scripts] " + coords + " A script is already running, scheduling...")
@@ -107,7 +117,30 @@ def run_script_and_run_next(script_in, x_in, y_in):
     coords = "(" + str(x_in) + ", " + str(y_in) + ")"
 
     run_script(script_in, x_in, y_in)
-    run_next()
+    if context_current():
+        run_next()
+
+
+def context_current():
+    current = threading.current_thread()
+    return not getattr(current, 'page_switch_requested', False) and (not hasattr(current, 'page_generation') or current.page_generation == page_state.book.generation)
+
+
+def cancel_for_page_change():
+    global threads, running, to_run
+    for column in threads:
+        for thread in column:
+            if thread is not None:
+                thread.kill.set()
+    threads = [[None for _ in range(9)] for _ in range(9)]
+    running, to_run = False, []
+    for column in lp_events.pressed:
+        for index in range(len(column)):
+            column[index] = False
+    try:
+        kb.release_all()
+    except Exception as error:
+        print('[pages] Input cleanup:', error)
 
 def run_script(script_str, x, y):
     """Keep daemon/protocol failures from blocking the macro queue."""
@@ -122,7 +155,7 @@ def run_script(script_str, x, y):
             print("[scripts] Input cleanup failed:", cleanup_error)
         first = next((line.strip() for line in script_str.splitlines()
                       if not is_ignorable_line(line)), "")
-        if first.split(" ")[0] not in ASYNC_HEADERS:
+        if first.split(" ")[0] not in ASYNC_HEADERS and context_current():
             running = False
 
 
@@ -244,7 +277,19 @@ def _run_script(script_str, x, y):
                     except Exception as e:
                         print("[scripts] " + coords + "    Error with running code: " + str(e))
                 elif split_line[0] == "SOUND_TRACK":
-                    sound.toggle_track((x, y), *track_commands.parse(line))
+                    sound.toggle_track((x, y), *track_commands.parse(line),
+                                       page_id=getattr(threading.current_thread(), 'page_id', None))
+                elif split_line[0] in ("SOUND_SKIP", "SOUND_SEEK"):
+                    parts = line.split()
+                    target = (int(parts[2]), int(parts[3])) if len(parts) == 4 else None
+                    sound.seek(float(parts[1]), target, relative=parts[0] == 'SOUND_SKIP',
+                               page_id=getattr(threading.current_thread(), 'page_id', None))
+                elif split_line[0] in ("PAGE", "PAGE_NEXT", "PAGE_PREV"):
+                    import window
+                    target = line.partition(' ')[2].strip().strip('"') if split_line[0] == 'PAGE' else split_line[0]
+                    threading.current_thread().page_switch_requested = True
+                    window.app.actions.put(('page', target))
+                    return -1
                 elif split_line[0] == "SOUND_PAUSE":
                     sound.pause(track_commands.control_fade(line))
                 elif split_line[0] == "SOUND_RESUME":
@@ -512,7 +557,7 @@ def _run_script(script_str, x, y):
             if (idx < 0) or (idx >= len(script_lines)):
                 run = False
 
-        if not is_async:
+        if not is_async and context_current():
             running = False
         threading.Timer(EXIT_UPDATE_DELAY, lp_colors.updateXY, (x, y)).start()
 
@@ -681,6 +726,20 @@ def validate_script(script_str):
                         return ("Headers must only be used on the first line of a script.", line)
                 if split_line[0] not in VALID_COMMANDS:
                     return ("Command '" + split_line[0] + "' not valid.", line)
+                if split_line[0] in ('SOUND_SKIP', 'SOUND_SEEK'):
+                    try:
+                        if len(split_line) not in (2, 4) or not math.isfinite(float(split_line[1])):
+                            raise ValueError()
+                        if split_line[0] == 'SOUND_SEEK' and float(split_line[1]) < 0:
+                            raise ValueError()
+                        if len(split_line) == 4 and any(not 0 <= int(value) <= 8 for value in split_line[2:]):
+                            raise ValueError()
+                    except (ValueError, IndexError):
+                        return ('Use ' + split_line[0] + ' seconds [pad_x pad_y].', line)
+                if split_line[0] in ('PAGE_NEXT', 'PAGE_PREV') and len(split_line) != 1:
+                    return ('This page command takes no arguments.', line)
+                if split_line[0] == 'PAGE' and not line.partition(' ')[2].strip():
+                    return ('Use PAGE name_or_number.', line)
                 if split_line[0] == "SOUND_TRACK":
                     try:
                         filename, *_ = track_commands.parse(line)

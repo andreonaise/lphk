@@ -21,8 +21,8 @@ extract the whole archive.
 - **windows:** open `LPHK.exe`.
 - **linux:** open a terminal in the extracted folder and run `./LPHK`.
 
-the release files are named `LPHK-0.5.1-Windows-x86_64.zip` and
-`LPHK-0.5.1-Linux-x86_64.tar.gz`. both include python and the app's libraries.
+the release files are named `LPHK-0.6.0-Windows-x86_64.zip` and
+`LPHK-0.6.0-Linux-x86_64.tar.gz`. both include python and the app's libraries.
 the linux build also bundles the wayland input tools, so you don't need to
 install those separately. github's source-code zip needs a development setup.
 
@@ -165,6 +165,43 @@ computer. wav and ogg are the safest formats; other formats depend on the
 bundled sdl_mixer decoder. tracks are decoded into memory, so several large
 files can use a lot of ram. the demo tone was generated for this project.
 
+## monitor, pages, and fullscreen
+
+the small monitor below the launchpad shows the selected track and its elapsed
+time / total length. its progress bar is a waveform from the actual audio.
+the played part turns green, or amber while paused. click anywhere on it to
+seek. the track selector includes tracks playing on other pages too.
+
+use the back and forward buttons to skip by the number in **skip (s)**.
+you can change that number; it is remembered next time. play / pause track
+controls the selected track, while play / pause all controls every active track.
+
+use **+ page** to add another set of pads. the selector and arrow buttons
+switch pages; rename and delete are next to them. audio keeps playing when
+you switch pages, and the same pad position on another page has its own track.
+save the layout to keep all its pages. older single-page layouts still open;
+older app versions can only see the active page of a new multi-page layout.
+
+for page-switching pads, use `PAGE_NEXT`, `PAGE_PREV`, or `PAGE "page name"`.
+`SOUND_SKIP -5` skips active soundtracks back five seconds; `SOUND_SEEK 30`
+jumps to thirty seconds. add pad coordinates to target one track, for example
+`SOUND_SKIP 5 0 1` for pad 0,1 on that page.
+
+**help > command guide** lists every available command with an explanation
+and example. you can search it, copy examples, or insert one from the editor.
+
+click **fullscreen** or press **f11** to toggle fullscreen. **esc** leaves it.
+the launchpad scales with the window, and the monitor stays below it.
+
+## updates
+
+click **update**, then **check for updates**. a newer published release can be
+downloaded, checked against its sha-256 checksum, and installed after you
+confirm. the app asks to save an unsaved layout before closing and restarting.
+your layouts, scripts, sounds, pages, and settings are kept. the previous app
+files go into `_rollback` beside the app. keep the app in a writable folder.
+source checkouts should be updated with git instead.
+
 ## your layouts and scripts
 
 layouts use `.lpl`, and individual scripts use `.lps`. the older `.LPHKlayout`
@@ -211,18 +248,18 @@ listed in `.github/workflows/release.yml`. build on the os you're targeting.
 
 ### building through github
 
-you can keep the repo private and still use actions. open **actions > build
-downloadable apps** and run the workflow to get windows and linux artifacts.
-people need access to the private repo to download them.
+open **actions > build downloadable apps** and run the workflow to get
+windows and linux artifacts. pushing a tag that matches `VERSION`, such as
+`v0.6.0`, also creates a draft release after both builds finish.
 
-pushing a tag that matches `VERSION`, such as `v0.5.1`, also creates a draft
-release after both builds finish. it includes the app archives, source, and
-sha-256 checksums. review the draft before publishing it. publishing a release
-in a private repo doesn't make the repo public.
+review and publish that draft to make it available through the app's update
+button. keep the generated app archives and `.sha256` files attached.
+the updater uses this public repo: [andreonaise/lphk](https://github.com/andreonaise/lphk).
+actions artifacts and draft releases aren't treated as app updates.
 
 ## what has been tested
 
-the windows gui, packaged startup/shutdown, and 56 automated tests have passed.
+the windows gui, packaged startup/shutdown, and 78 automated tests have passed.
 the gui checks use a fake launchpad and cover the pad modes, script editing,
 colour selection, import/export, layout save/load, help, and disconnection.
 
@@ -231,6 +268,17 @@ a passing build on a linux runner doesn't confirm those work on a real desktop.
 
 if something breaks, include your os, desktop/session type, launchpad model,
 and the relevant part of `LPHK.log` from the user folder when reporting it.
+
+## android preview
+
+there is also an android app for touchscreen pads and editing a physical
+launchpad mini. it includes soundtrack playback, fades, pages, a waveform
+monitor, and desktop layout import/export. keyboard/mouse scripts can be
+edited for desktop use, but won't execute as desktop macros on android.
+
+see [the android readme](android/README.md) for installation and usb setup.
+**actions > build android apk** builds its apk separately from the desktop apps.
+this first android build still needs testing on a phone and a real launchpad.
 
 ## credits
 

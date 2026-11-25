@@ -1,7 +1,9 @@
 """Independent mixer channels with nonblocking fades and real pause/unpause."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import threading
 import time
+import math
+from audio_waveform import overview
 
 
 @dataclass
@@ -14,6 +16,10 @@ class Track:
     fade_out: int
     length: float
     pause_fade: object = None
+    channel_index: int = 0
+    base_sound: object = None
+    pcm: object = None
+    waveform: list = field(default_factory=list)
     state: str = 'stopped'
     gain: float = 0
     elapsed: float = 0
@@ -28,6 +34,7 @@ class TrackPlayer:
         self.clock = clock
         self.lock = threading.RLock()
         self.tracks = {}
+        self.channel_owners = {}
 
     def _position(self, track, now):
         if track.state in ('stopped', 'paused'):
@@ -48,10 +55,13 @@ class TrackPlayer:
             track.elapsed = self._position(track, now)
             track.channel.pause()
             track.state = 'paused'
-        elif action == 'stop':
+        elif action in ('stop', 'end'):
             track.channel.stop()
             track.sound = None
-            track.elapsed = 0
+            track.base_sound = track.pcm = None
+            if self.channel_owners.get(track.channel_index) is track:
+                self.channel_owners.pop(track.channel_index)
+            track.elapsed = track.length if action == 'end' else 0
             track.state = 'stopped'
         else:
             track.state = 'playing'
@@ -70,14 +80,27 @@ class TrackPlayer:
                 return
             # Load first: a bad replacement must not interrupt an existing track.
             clip = self.mixer.Sound(self.resolve(filename))
-            if track:
+            if track and track.state != 'stopped':
                 track.channel.stop()
-            channel = self.mixer.Channel(pad[0] * 9 + pad[1])
+                self.channel_owners.pop(track.channel_index, None)
+            coordinates = pad[-2:]
+            preferred = coordinates[0] * 9 + coordinates[1]
+            index = preferred if preferred not in self.channel_owners else next((i for i in range(81) if i not in self.channel_owners), None)
+            if index is None:
+                raise RuntimeError('All 81 soundtrack channels are in use. Stop a track before starting another.')
+            channel = self.mixer.Channel(index)
             now = self.clock()
             track = Track(filename, clip, channel, volume / 100, fade_in, fade_out,
                           clip.get_length(), pause_fade=fade_out if pause_fade is None else pause_fade,
+                          channel_index=index, base_sound=clip,
                           state='playing', active_since=now)
+            try:
+                _, sample_format, channels = self.mixer.get_init()
+                track.waveform = overview(clip, channels, sample_format)
+            except (TypeError, ValueError, AttributeError):
+                track.waveform = []
             self.tracks[pad] = track
+            self.channel_owners[index] = track
             # Set initial gain before play to avoid a full-volume first buffer.
             track.gain = 0 if fade_in else track.volume
             channel.set_volume(track.gain)
@@ -142,6 +165,45 @@ class TrackPlayer:
                 self.toggle(pad, *settings)
             return 'play'
 
+    def seek(self, pad, seconds, relative=False):
+        if not math.isfinite(float(seconds)):
+            raise ValueError('Seek time must be a finite number.')
+        with self.lock:
+            self.update()
+            track = self.tracks.get(pad)
+            if not track or track.state == 'stopped':
+                return
+            now = self.clock()
+            target = float(seconds) + (self._position(track, now) if relative else 0)
+            target = max(0, min(track.length, target))
+            if target >= track.length:
+                self._finish(track, 0, 'end', now)
+                return
+            rate, size, channels = self.mixer.get_init()
+            frame_bytes = abs(size) // 8 * channels
+            if track.pcm is None:
+                track.pcm = track.base_sound.get_raw()
+            frame = int(target * rate)
+            clip = self.mixer.Sound(buffer=track.pcm[frame * frame_bytes:])
+            paused = track.state == 'paused'
+            if track.envelope and track.envelope[-1] == 'end':
+                track.envelope = None
+                track.gain = track.volume
+                track.state = 'playing'
+            track.channel.stop()
+            track.channel.set_volume(0 if paused else track.gain)
+            track.channel.play(clip)
+            if paused:
+                track.channel.pause()
+            track.sound = clip
+            track.base_sound = None
+            track.elapsed, track.active_since = frame / rate, now
+
+    def seek_all(self, seconds, relative=False):
+        with self.lock:
+            for pad in list(self.tracks):
+                self.seek(pad, seconds, relative)
+
     def update(self):
         with self.lock:
             now = self.clock()
@@ -149,7 +211,7 @@ class TrackPlayer:
                 if track.state in ('stopped', 'paused'):
                     continue
                 if not track.channel.get_busy():
-                    self._finish(track, 0, 'stop', now)
+                    self._finish(track, 0, 'end', now)
                     continue
                 if track.envelope:
                     start, duration, initial, target, action = track.envelope
@@ -159,14 +221,14 @@ class TrackPlayer:
                     if fraction == 1:
                         self._finish(track, target, action, now)
                 remaining = track.length - self._position(track, now)
-                ending = track.envelope and track.envelope[-1] in ('pause', 'stop')
+                ending = track.envelope and track.envelope[-1] in ('pause', 'stop', 'end')
                 if track.state not in ('stopped', 'paused') and not ending and track.fade_out and remaining <= track.fade_out / 1000:
-                    self._fade(track, 0, max(0, round(remaining * 1000)), 'stop', now)
+                    self._fade(track, 0, max(0, round(remaining * 1000)), 'end', now)
 
     def snapshot(self):
         with self.lock:
             now = self.clock()
             return {pad: {'filename': track.filename, 'state': track.state,
                           'gain': track.gain, 'position': self._position(track, now),
-                          'length': track.length}
+                          'length': track.length, 'waveform': track.waveform}
                     for pad, track in self.tracks.items()}

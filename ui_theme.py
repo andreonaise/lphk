@@ -53,6 +53,10 @@ def apply(root):
     style.configure('TCombobox', fieldbackground=FIELD, background=BUTTON, arrowcolor=TEXT)
     style.map('TCombobox', fieldbackground=[('readonly', FIELD)], foreground=[('readonly', TEXT)])
     style.configure('TNotebook.Tab', padding=(10, 6))
+    style.configure('Treeview', background=FIELD, fieldbackground=FIELD, foreground=TEXT, rowheight=28)
+    style.map('Treeview', background=[('selected', ACCENT_BG)], foreground=[('selected', TEXT)])
+    style.configure('Treeview.Heading', background=BUTTON, foreground=TEXT, padding=6)
+    style.configure('Horizontal.TProgressbar', background=ACCENT, troughcolor=FIELD)
     style.layout('LPHK.Vertical.TScrollbar', [
         ('Vertical.Scrollbar.trough', {'sticky': 'ns', 'children': [
             ('Vertical.Scrollbar.thumb', {'expand': '1', 'sticky': 'nswe'})]})])

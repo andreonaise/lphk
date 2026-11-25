@@ -1,11 +1,13 @@
 import lp_colors, scripts
 from time import sleep
 import os, json, platform, subprocess
+import page_state
+import sound
 
 LAYOUT_DIR = "user_layouts"
 SCRIPT_DIR = "user_scripts"
 
-FILE_VERSION = "0.1.1"
+FILE_VERSION = "0.2.0"
 
 LAYOUT_EXT = ".lpl"
 SCRIPT_EXT = ".lps"
@@ -30,6 +32,8 @@ def init(user_path_in):
     USER_PATH = user_path_in
     LAYOUT_PATH = os.path.join(USER_PATH, LAYOUT_DIR)
     SCRIPT_PATH = os.path.join(USER_PATH, SCRIPT_DIR)
+    page_state.book.reset()
+    sound.set_page(page_state.book.current['id'])
 
 def save_layout(layout, name, printing=True):
     with open(name, "w") as f:
@@ -101,18 +105,8 @@ def load_layout(name, popups=True, save_converted=True, printing=True):
     return layout
 
 def save_lp_to_layout(name):
-    layout = dict()
-    layout["version"] = FILE_VERSION
-
-    layout["buttons"] = []
-    for x in range(9):
-        layout["buttons"].append([])
-        for y in range(9):
-            color = lp_colors.curr_colors[x][y]
-            script_text = scripts.text[x][y]
-
-            layout["buttons"][-1].append({"color": color, "text": script_text})
-
+    page_state.book.capture(scripts.text, lp_colors.curr_colors)
+    layout = page_state.book.to_layout(FILE_VERSION)
     save_layout(layout=layout, name=name)
 
 def load_layout_to_lp(name, popups=True, save_converted=True, preload=None):
@@ -122,13 +116,19 @@ def load_layout_to_lp(name, popups=True, save_converted=True, preload=None):
 
     converted_to_rg = False
 
-    scripts.unbind_all()
-    window.app.draw_canvas()
-
     if preload == None:
         layout = load_layout(name, popups=popups, save_converted=save_converted)
     else:
         layout = preload
+
+    # Validate before changing the current layout or stopping its audio.
+    candidate = page_state.PageBook()
+    candidate.load(layout)
+    scripts.unbind_all()
+    page_state.book.load(layout)
+    sound.set_page(page_state.book.current['id'])
+    layout = dict(layout, buttons=page_state.book.current['buttons'])
+    window.app.draw_canvas()
 
     for x in range(9):
         for y in range(9):
@@ -167,6 +167,8 @@ def load_layout_to_lp(name, popups=True, save_converted=True, preload=None):
 
     curr_layout = name
     window.app.update_sidebar()
+    if hasattr(window.app, 'refresh_pages'):
+        window.app.refresh_pages()
     if converted_to_rg:
         if popups:
             window.app.popup(window.app, "Layout converted to Classic/Mini/S...", window.app.info_image, "The colors in this layout have been converted to be\ncompatable with the Launchpad Classic/Mini/S.\n\nChanges have not yet been saved to the file.", "OK")

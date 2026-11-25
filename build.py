@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 
 root = Path(__file__).resolve().parent
 args = [sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean",
@@ -24,4 +25,8 @@ elif sys.platform.startswith("linux"):
         if not helper.is_file():
             raise SystemExit("Build the bundled input tools first: python release_tools/build_linux_helpers.py")
         args += ["--add-binary", f"{helper}{os.pathsep}tools"]
-subprocess.run([*args, "LPHK.py"], cwd=root, check=True)
+with tempfile.TemporaryDirectory() as metadata:
+    repository = Path(metadata) / 'UPDATE_REPOSITORY'
+    repository.write_text(os.environ.get('GITHUB_REPOSITORY', 'andreonaise/lphk'), encoding='utf-8')
+    args += ['--add-data', f'{repository}{os.pathsep}.']
+    subprocess.run([*args, "LPHK.py"], cwd=root, check=True)

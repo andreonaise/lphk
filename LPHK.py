@@ -3,6 +3,23 @@ import sys
 from datetime import datetime
 from runtime_support import prepare_user_data, restart_command
 
+if '--apply-update' in sys.argv[1:]:
+    from pathlib import Path
+    import app_updater
+    plan_path = Path(sys.argv[sys.argv.index('--apply-update') + 1])
+    try:
+        if not getattr(sys, 'frozen', False):
+            raise RuntimeError('Use the staged app binary to apply an update.')
+        app_updater.apply_update(plan_path, helper_root=Path(sys.executable).parent)
+    except Exception as error:
+        message = 'LPHK update failed: ' + str(error)
+        (plan_path.parent / 'update-error.log').write_text(message, encoding='utf-8')
+        if sys.platform == 'win32':
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(None, message + '\nThe previous app files are kept/restored. See ' + str(plan_path.parent / 'update-error.log'), 'LPHK update', 16)
+        sys.exit(1)
+    sys.exit(0)
+
 if "--check-system" in sys.argv[1:]:
     from check_system import main as check_main
     try:

@@ -10,6 +10,19 @@ player = None
 TRACK_CHANNELS = 81
 _worker = None
 _worker_stop = None
+current_page = None
+
+
+def set_page(page_id):
+    global current_page
+    current_page = page_id
+
+
+def pad_key(pad, page_id=None):
+    if len(pad) == 3:
+        return pad
+    page = current_page if page_id is None else page_id
+    return tuple(pad) if page is None else (page, *pad)
 
 
 def _end_worker():
@@ -74,16 +87,16 @@ def play(filename, volume=100.0):
         print('[sound] Could not play sound:', error)
 
 
-def toggle_track(pad, filename, volume=100, fade_in=0, fade_out=0, pause_fade=None):
+def toggle_track(pad, filename, volume=100, fade_in=0, fade_out=0, pause_fade=None, page_id=None):
     if player is None:
         raise RuntimeError('Audio is unavailable. Check your audio output and restart LPHK.')
-    player.toggle(pad, filename, volume, fade_in, fade_out, pause_fade)
+    player.toggle(pad_key(pad, page_id), filename, volume, fade_in, fade_out, pause_fade)
 
 
 def toggle_all(bindings):
     if player is None:
         raise RuntimeError('Audio is unavailable. Check your audio output and restart LPHK.')
-    return player.toggle_all(bindings)
+    return player.toggle_all({pad_key(pad): settings for pad, settings in bindings.items()})
 
 
 def pause(fade_ms=None):
@@ -105,12 +118,31 @@ def stop():
 
 def stop_track(pad):
     if player:
-        player.stop(pad)
+        player.stop(pad_key(pad))
 
 
 def stop_tracks():
     if player:
-        player.all('stop')
+        with player.lock:
+            player.all('stop')
+            player.tracks.clear()
+
+
+def stop_page(page_id):
+    if player:
+        with player.lock:
+            for key in list(player.snapshot()):
+                if len(key) == 3 and key[0] == page_id:
+                    player.stop(key)
+                    player.tracks.pop(key, None)
+
+
+def seek(seconds, pad=None, relative=False, page_id=None):
+    if player:
+        if pad is None:
+            player.seek_all(seconds, relative)
+        else:
+            player.seek(pad_key(pad, page_id), seconds, relative)
 
 
 def stop_faded():
@@ -137,6 +169,12 @@ def tick():
 
 
 def snapshot():
+    states = all_snapshot()
+    return {key[-2:]: state for key, state in states.items()
+            if len(key) == 2 or key[0] == current_page}
+
+
+def all_snapshot():
     return player.snapshot() if player else {}
 
 
