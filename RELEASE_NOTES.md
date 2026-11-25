@@ -1,16 +1,19 @@
-## lphk 0.6.0
+## lphk 0.7.0 / android preview 0.2.0
 
-- inline track monitor below the launchpad, with elapsed / total time.
-- actual audio waveform as the progress bar; click it to seek.
-- configurable forward/backward skip buttons and SOUND_SKIP / SOUND_SEEK commands.
-- multiple saved pages, with page controls and PAGE / PAGE_NEXT / PAGE_PREV commands.
-- tracks keep playing across page switches, including separate tracks at the same pad position.
-- fullscreen button, f11 / esc shortcuts, and a resizable launchpad grid.
-- searchable in-app guide for every script command, with copy/insert examples.
-- update button for published releases from andreonaise/lphk, checksum verification,
-  restart/install, preserved user files, and a backup of the previous app files.
-- existing one-button play/pause, independent fades, and demo mode are kept.
+- visual action builder for every script command on desktop and android.
+- choose an action and fill in labelled settings instead of writing syntax.
+- add, edit, duplicate, reorder, and remove steps in a sequence.
+- keyboard shortcut helper with modifier checkboxes and a key selector.
+- key, page, audio, and existing-label suggestions; file browsing on desktop
+  and audio import on android. fade settings use seconds.
+- existing scripts, comments, blank lines, and unknown commands are preserved
+  until edited or removed. cancel leaves the original text untouched.
+- checks for invalid numbers, incomplete pad targets, misplaced headers,
+  standalone hold-key/load-layout bindings, and missing/duplicate labels.
+- android desktop-only commands stay editable/exportable without being executed.
+- existing text editing and soundtrack settings remain available.
 
-78 automated tests and the windows gui/audio/page checks pass. the packaged
-windows app is checked separately. linux/mangowm, audible hardware output,
-and real launchpad leds still need on-device testing.
+92 desktop unit tests, the visual builder GUI test, and existing windows GUI,
+audio, and page checks pass. android checks cover MIDI parsing, layout transfer,
+and matching visual-form output for every command. actual phone and launchpad
+hardware testing is still pending; linux is built through github actions.

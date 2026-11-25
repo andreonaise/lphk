@@ -21,8 +21,8 @@ extract the whole archive.
 - **windows:** open `LPHK.exe`.
 - **linux:** open a terminal in the extracted folder and run `./LPHK`.
 
-the release files are named `LPHK-0.6.0-Windows-x86_64.zip` and
-`LPHK-0.6.0-Linux-x86_64.tar.gz`. both include python and the app's libraries.
+the release files are named `LPHK-0.7.0-Windows-x86_64.zip` and
+`LPHK-0.7.0-Linux-x86_64.tar.gz`. both include python and the app's libraries.
 the linux build also bundles the wayland input tools, so you don't need to
 install those separately. github's source-code zip needs a development setup.
 
@@ -86,6 +86,25 @@ destination. you can also change modes with the original control in the top
 right of the grid. new, load, save, and save as are still in the layout menu.
 script import/export, validation, colour selection, and unbinding are still
 available in the editor.
+
+you can also build the whole script without writing command syntax:
+
+1. open a pad and click **build actions…**.
+2. use **add action…**, choose what it should do, and fill in its settings.
+3. add more actions, then move them up/down to set their order.
+4. use **apply to pad editor**, then **bind button** and save the layout.
+
+every command has a form: keys, mouse actions, text, websites, programs, audio,
+delays, pages, labels, repeats, and the special first-line actions. key, page,
+and existing-label fields offer dropdowns. files can be browsed; imported
+audio is copied into `user_sounds`. fades are entered in seconds.
+
+**keyboard shortcut…** creates the press/tap/release sequence from modifier
+checkboxes and a key. existing scripts open as ordered actions. comments and
+unrecognized lines stay unchanged unless you edit or remove them. cancel
+leaves the original script alone. the text editor is still available.
+
+![the action builder](docs/screenshots/action-builder.png)
 
 ![the script editor](docs/screenshots/editor.png)
 
@@ -250,7 +269,7 @@ listed in `.github/workflows/release.yml`. build on the os you're targeting.
 
 open **actions > build downloadable apps** and run the workflow to get
 windows and linux artifacts. pushing a tag that matches `VERSION`, such as
-`v0.6.0`, also creates a draft release after both builds finish.
+`v0.7.0`, also creates a draft release after both builds finish.
 
 review and publish that draft to make it available through the app's update
 button. keep the generated app archives and `.sha256` files attached.
@@ -259,7 +278,7 @@ actions artifacts and draft releases aren't treated as app updates.
 
 ## what has been tested
 
-the windows gui, packaged startup/shutdown, and 78 automated tests have passed.
+the windows gui, packaged startup/shutdown, and 92 automated tests have passed.
 the gui checks use a fake launchpad and cover the pad modes, script editing,
 colour selection, import/export, layout save/load, help, and disconnection.
 

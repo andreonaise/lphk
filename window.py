@@ -886,6 +886,10 @@ class Main_Window(tk.Frame):
             import soundtrack_ui
             soundtrack_ui.open_settings(w, t, USER_PATH)
         theme.button(properties, 'Soundtrack...', soundtrack_settings).pack(fill='x', pady=(12, 0))
+        def build_actions():
+            import script_builder_ui
+            script_builder_ui.open_builder(w, t, USER_PATH)
+        theme.button(properties, 'Build actions…', build_actions, primary=True).pack(fill='x', pady=(8, 0))
         theme.button(properties, 'Command guide', lambda: self.open_guide(t)).pack(fill='x', pady=(8, 0))
 
         unbind_func = lambda: self.unbind_destroy(x, y, w)
